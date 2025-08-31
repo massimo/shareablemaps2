@@ -19,7 +19,7 @@ import { MarkerService } from '@/lib/markerService';
 import { SharedMapService } from '@/lib/sharedMapService';
 import { auth } from '@/lib/firebase';
 import { MapIcon, ShareIcon } from '@heroicons/react/24/outline';
-import { Bars3Icon, Squares2X2Icon } from '@heroicons/react/24/outline';
+import { Bars3Icon, Squares2X2Icon, ListBulletIcon } from '@heroicons/react/24/outline';
 
 // Dynamically import MapCanvas to avoid SSR issues with Leaflet
 const MapCanvas = dynamic(() => import('@/components/editor/MapCanvas'), {
@@ -49,6 +49,7 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
   const [currentShareSettings, setCurrentShareSettings] = useState<ShareSettings | undefined>();
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<'expanded' | 'compact'>('expanded');
+  const [mobileViewMode, setMobileViewMode] = useState<'list' | 'map'>('list');
   const [showMarkerForm, setShowMarkerForm] = useState(false);
   const [showAddMarkerConfirm, setShowAddMarkerConfirm] = useState(false);
   const [editingMarker, setEditingMarker] = useState<MarkerDoc | undefined>();
@@ -454,6 +455,11 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
     setSelectedMarkerId(marker.id);
     setSelectedMarker(marker);
     
+    // On mobile, automatically switch to map view when a marker is selected
+    if (window.innerWidth < 768) { // md breakpoint
+      setMobileViewMode('map');
+    }
+    
     // Center and zoom to the selected marker with smooth animation
     if (mapRef.current && marker.lat && marker.lng) {
       console.log('Centering map on marker:', marker.title, `(${marker.lat}, ${marker.lng})`);
@@ -514,7 +520,7 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
   }, [id]);
 
   return (
-    <div className="h-full flex">
+    <div className="h-full flex flex-col md:flex-row">
       {isLoadingMap ? (
         // Loading State
         <div className="flex-1 flex items-center justify-center bg-gray-50">
@@ -547,8 +553,40 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
       ) : (
         // Map Editor Content
         <>
+          {/* Mobile Segmented Control - Only visible on mobile */}
+          <div className="md:hidden bg-white border-b border-gray-200 p-3">
+            <div className="flex items-center justify-center">
+              <div className="flex items-center bg-gray-100 rounded-lg p-1">
+                <button
+                  onClick={() => setMobileViewMode('list')}
+                  className={`flex items-center space-x-2 px-4 py-2 rounded-md transition-colors ${
+                    mobileViewMode === 'list'
+                      ? 'bg-white text-blue-600 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  <ListBulletIcon className="h-4 w-4" />
+                  <span className="text-sm font-medium">List</span>
+                </button>
+                <button
+                  onClick={() => setMobileViewMode('map')}
+                  className={`flex items-center space-x-2 px-4 py-2 rounded-md transition-colors ${
+                    mobileViewMode === 'map'
+                      ? 'bg-white text-blue-600 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  <MapIcon className="h-4 w-4" />
+                  <span className="text-sm font-medium">Map</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
           {/* Left Panel - Marker List */}
-          <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
+          <div className={`w-full md:w-80 bg-white border-r border-gray-200 flex flex-col ${
+            mobileViewMode === 'map' ? 'hidden md:flex' : 'flex'
+          }`}>
             <div className="p-4 border-b border-gray-200">
               {/* Location Search */}
               <LocationSearch
@@ -688,12 +726,14 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
           </div>
 
           {/* Right Panel - Map */}
-          <div className="flex-1 relative">
+          <div className={`flex-1 relative ${
+            mobileViewMode === 'list' ? 'hidden md:flex' : 'flex'
+          }`}>
             <MapCanvas
               onMapClick={handleMapClick}
               onMarkerSelect={handleMarkerSelect}
               onMapReady={handleMapReady}
-              className="h-full"
+              className="h-full w-full"
               markers={markers} // Show all markers on map, regardless of filter
               pendingPosition={pendingPosition}
               pendingColor={pendingColor}
@@ -703,12 +743,25 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
             
             {/* Marker Card Overlay */}
             {selectedMarker && (
-              <div className="absolute top-4 right-4 w-80 z-[1000]">
+              <div className="absolute top-4 right-4 w-80 max-w-[calc(100vw-2rem)] z-[1000]">
                 <MarkerCard
                   marker={selectedMarker}
                   onClose={handleMarkerCardClose}
                   onDirections={handleDirections}
                 />
+              </div>
+            )}
+
+            {/* Mobile: Back to List Button - Only visible when in map mode on mobile */}
+            {mobileViewMode === 'map' && (
+              <div className="absolute top-4 left-4 md:hidden z-[1000]">
+                <button
+                  onClick={() => setMobileViewMode('list')}
+                  className="flex items-center space-x-2 bg-white text-gray-700 px-3 py-2 rounded-md shadow-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+                >
+                  <ListBulletIcon className="h-4 w-4" />
+                  <span className="text-sm font-medium">List</span>
+                </button>
               </div>
             )}
 
