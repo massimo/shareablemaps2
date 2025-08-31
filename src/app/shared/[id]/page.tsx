@@ -14,7 +14,7 @@ import { SharedMapService } from '@/lib/sharedMapService';
 import { MarkerService } from '@/lib/markerService';
 import { MARKER_CATEGORIES } from '@/lib/categories';
 import { MapIcon } from '@heroicons/react/24/outline';
-import { Bars3Icon, Squares2X2Icon } from '@heroicons/react/24/outline';
+import { Bars3Icon, Squares2X2Icon, KeyIcon } from '@heroicons/react/24/outline';
 
 // Dynamically import MapCanvas to avoid SSR issues with Leaflet
 const MapCanvas = dynamic(() => import('@/components/editor/MapCanvas'), {
@@ -84,14 +84,18 @@ export default function SharedMapPage({ params }: SharedMapPageProps) {
       setAccessError(undefined);
 
       try {
+        console.log('Loading shared map with ID:', id);
         const result = await SharedMapService.getSharedMap(id);
+        console.log('SharedMapService result:', result);
         
         if (!result.accessGranted) {
           if (result.requiresPassword) {
+            console.log('Map requires password, showing password modal');
             setRequiresPassword(true);
             setShowPasswordModal(true);
             setMapTitle(result.map?.title || 'Protected Map');
           } else {
+            console.log('Access denied:', result.error);
             setAccessError(result.error || 'Access denied');
           }
           setIsLoading(false);
@@ -330,9 +334,34 @@ export default function SharedMapPage({ params }: SharedMapPageProps) {
     );
   }
 
+  // Password-protected map view
+  if (!accessGranted && requiresPassword) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center max-w-md mx-auto p-6">
+          <div className="text-blue-600 mb-4">
+            <KeyIcon className="mx-auto h-12 w-12" />
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Password Required</h3>
+          <p className="text-sm text-gray-500 mb-4">This map is password protected. Please enter the password to view it.</p>
+          
+          {/* Password Modal will be rendered at the bottom */}
+          <PasswordModal
+            isOpen={showPasswordModal}
+            mapTitle={mapTitle}
+            error={passwordError}
+            onSubmit={handlePasswordSubmit}
+            onCancel={handlePasswordCancel}
+            isLoading={isLoading}
+          />
+        </div>
+      </div>
+    );
+  }
+
   // Main shared map view
   if (!accessGranted) {
-    return null; // Will show password modal if needed
+    return null; // This should not happen if logic above handles password case
   }
 
   return (
@@ -475,16 +504,6 @@ export default function SharedMapPage({ params }: SharedMapPageProps) {
           </div>
         </div>
       </div>
-
-      {/* Password Modal */}
-      <PasswordModal
-        isOpen={showPasswordModal}
-        mapTitle={mapTitle}
-        error={passwordError}
-        onSubmit={handlePasswordSubmit}
-        onCancel={handlePasswordCancel}
-        isLoading={isLoading}
-      />
 
       {/* Directions Modal */}
       {selectedMarker && (
