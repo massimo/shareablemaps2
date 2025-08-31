@@ -34,7 +34,8 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
   const [selectedMarkerId, setSelectedMarkerId] = useState<string>();
   const [showMarkerForm, setShowMarkerForm] = useState(false);
   const [editingMarker, setEditingMarker] = useState<MarkerDoc | undefined>();
-  const [pendingPosition, setPendingPosition] = useState<{ lat: number; lng: number } | undefined>();
+  const [pendingPosition, setPendingPosition] = useState<{ lat: number; lng: number; address?: string } | undefined>();
+  const [pendingColor, setPendingColor] = useState<string>('#ef4444'); // Default red
   const [isLoadingMap, setIsLoadingMap] = useState(true);
   const [mapError, setMapError] = useState<string | null>(null);
 
@@ -91,9 +92,11 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
 
   const handleMapClick = useCallback((e: any) => {
     const { lat, lng } = e.latlng;
+    // If there's already a pending position, replace it with the clicked location
     setPendingPosition({ lat, lng });
     setEditingMarker(undefined);
     setShowMarkerForm(true);
+    setPendingColor('#ef4444'); // Reset to default color for new marker
   }, []);
 
   const handleLocationSelect = useCallback((location: { lat: number; lng: number; address: string }) => {
@@ -101,11 +104,16 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
     setPendingPosition(location);
     setEditingMarker(undefined);
     setShowMarkerForm(true);
+    setPendingColor('#ef4444'); // Reset to default color for new marker
     
     // Move the map to the selected location
     setMapCenter([location.lat, location.lng]);
     setMapZoom(16); // Zoom in for better detail
   }, [setMapCenter, setMapZoom]);
+
+  const handleColorChange = useCallback((color: string) => {
+    setPendingColor(color);
+  }, []);
 
   const handleMarkerSave = useCallback((data: any) => {
     // TODO: Save to Firebase
@@ -118,6 +126,11 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
       address: data.address,
       description: data.description,
       tips: data.tips,
+      icon: data.color ? {
+        library: 'default' as const,
+        name: 'marker',
+        color: data.color,
+      } : undefined,
       createdAt: new Date() as any,
       updatedAt: new Date() as any,
       createdBy: 'current-user', // TODO: Get from auth
@@ -131,13 +144,15 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
 
     setShowMarkerForm(false);
     setEditingMarker(undefined);
-    setPendingPosition(undefined);
+    setPendingPosition(undefined); // Clear pending position only after saving
+    setPendingColor('#ef4444'); // Reset to default color
   }, [editingMarker]);
 
   const handleMarkerEdit = useCallback((marker: MarkerDoc) => {
     setEditingMarker(marker);
     setShowMarkerForm(true);
     setPendingPosition(undefined);
+    setPendingColor(marker.icon?.color || '#ef4444'); // Use marker's existing color or default
   }, []);
 
   const handleMarkerDelete = useCallback((markerId: string) => {
@@ -200,12 +215,30 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
                 }
               />
               
+              {/* Clear pending marker button - only show if there's a pending position */}
+              {pendingPosition && !showMarkerForm && (
+                <button
+                  onClick={() => {
+                    setPendingPosition(undefined);
+                    setPendingColor('#ef4444'); // Reset color
+                  }}
+                  className="mt-2 w-full text-xs text-gray-500 hover:text-gray-700 underline"
+                >
+                  Clear pending marker
+                </button>
+              )}
+              
               {/* Add Marker Button */}
               <button
                 onClick={() => {
-                  setPendingPosition({ lat: 51.505, lng: -0.09 }); // Default position
+                  // Use current map center or default to current position
+                  const defaultPos = mapCenter && Array.isArray(mapCenter) 
+                    ? { lat: mapCenter[0], lng: mapCenter[1] }
+                    : { lat: 51.505, lng: -0.09 }; // Fallback to London
+                  setPendingPosition(defaultPos);
                   setEditingMarker(undefined);
                   setShowMarkerForm(true);
+                  setPendingColor('#ef4444'); // Reset to default color for new marker
                 }}
                 className="mt-3 w-full inline-flex items-center justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
               >
@@ -233,9 +266,10 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
                 onCancel={() => {
                   setShowMarkerForm(false);
                   setEditingMarker(undefined);
-                  setPendingPosition(undefined);
+                  // Keep pendingPosition so the marker stays visible on the map
                 }}
                 defaultPosition={pendingPosition}
+                onColorChange={handleColorChange}
               />
             )}
           </div>
@@ -247,6 +281,7 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
               className="h-full"
               markers={markers}
               pendingPosition={pendingPosition}
+              pendingColor={pendingColor}
             />
           </div>
         </>

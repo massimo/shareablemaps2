@@ -23,6 +23,7 @@ interface MapCanvasProps {
   className?: string;
   markers?: MarkerDoc[];
   pendingPosition?: { lat: number; lng: number; address?: string };
+  pendingColor?: string;
 }
 
 function MapController({ 
@@ -73,9 +74,26 @@ export default function MapCanvas({
   className = 'h-full w-full',
   markers = [],
   pendingPosition,
+  pendingColor,
 }: MapCanvasProps) {
   const mapRef = useRef<L.Map | null>(null);
   const { mapCenter, mapZoom } = useMapStore();
+
+  // Function to create colored marker icons
+  const createColoredIcon = React.useCallback((color?: string) => {
+    const baseIconUrl = '/leaflet/marker-icon.png';
+    
+    return new L.Icon({
+      iconUrl: baseIconUrl,
+      iconRetinaUrl: '/leaflet/marker-icon-2x.png',
+      shadowUrl: '/leaflet/marker-shadow.png',
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowSize: [41, 41],
+      className: color ? `colored-marker-${color.replace('#', '')}` : undefined,
+    });
+  }, []);
 
   // Create a special icon for pending markers using useMemo to prevent recreation
   const pendingIcon = React.useMemo(() => {
@@ -91,7 +109,7 @@ export default function MapCanvas({
     });
   }, []);
 
-  // Add CSS for pending marker animation
+  // Add CSS for pending marker animation and colored markers
   useEffect(() => {
     const style = document.createElement('style');
     style.textContent = `
@@ -103,6 +121,18 @@ export default function MapCanvas({
         0%, 100% { opacity: 1; }
         50% { opacity: 0.7; }
       }
+      
+      /* Colored marker styles */
+      .colored-marker-ef4444 { filter: hue-rotate(0deg) brightness(1) saturate(1.5); }
+      .colored-marker-3b82f6 { filter: hue-rotate(220deg) brightness(1.1) saturate(1.3); }
+      .colored-marker-10b981 { filter: hue-rotate(140deg) brightness(1.1) saturate(1.4); }
+      .colored-marker-f59e0b { filter: hue-rotate(35deg) brightness(1.2) saturate(1.5); }
+      .colored-marker-8b5cf6 { filter: hue-rotate(260deg) brightness(1.1) saturate(1.3); }
+      .colored-marker-ec4899 { filter: hue-rotate(320deg) brightness(1.2) saturate(1.4); }
+      .colored-marker-f97316 { filter: hue-rotate(25deg) brightness(1.1) saturate(1.5); }
+      .colored-marker-14b8a6 { filter: hue-rotate(175deg) brightness(1.1) saturate(1.4); }
+      .colored-marker-6366f1 { filter: hue-rotate(235deg) brightness(1.1) saturate(1.3); }
+      .colored-marker-6b7280 { filter: grayscale(1) brightness(0.8); }
     `;
     document.head.appendChild(style);
     
@@ -137,6 +167,7 @@ export default function MapCanvas({
           <Marker
             key={marker.id}
             position={[marker.lat, marker.lng]}
+            icon={createColoredIcon(marker.icon?.color)}
           >
             <Popup>
               <div className="min-w-0">
@@ -147,6 +178,15 @@ export default function MapCanvas({
                 {marker.description && (
                   <p className="text-xs text-gray-800 mt-2">{marker.description}</p>
                 )}
+                {marker.icon?.color && (
+                  <div className="mt-2 flex items-center">
+                    <div 
+                      className="w-3 h-3 rounded-full border border-gray-300 mr-2"
+                      style={{ backgroundColor: marker.icon.color }}
+                    />
+                    <span className="text-xs text-gray-500">Custom Color</span>
+                  </div>
+                )}
               </div>
             </Popup>
           </Marker>
@@ -155,17 +195,26 @@ export default function MapCanvas({
         {/* Pending Marker (when creating/editing) */}
         {pendingPosition && (
           <Marker
-            key="pending-marker"
+            key={`pending-marker-${pendingColor}`} // Key includes color to force re-render
             position={[pendingPosition.lat, pendingPosition.lng]}
-            icon={pendingIcon}
+            icon={createColoredIcon(pendingColor)}
           >
             <Popup>
               <div className="min-w-0">
-                <h3 className="font-semibold text-sm text-blue-600">New Marker</h3>
+                <h3 className="font-semibold text-sm text-blue-600">Pending Marker</h3>
                 {pendingPosition.address && (
                   <p className="text-xs text-gray-600 mt-1">{pendingPosition.address}</p>
                 )}
-                <p className="text-xs text-blue-500 mt-1">Fill out the form to add this marker</p>
+                <p className="text-xs text-blue-500 mt-1">Use the form to add this marker to your map</p>
+                {pendingColor && (
+                  <div className="mt-2 flex items-center">
+                    <div 
+                      className="w-3 h-3 rounded-full border border-gray-300 mr-2"
+                      style={{ backgroundColor: pendingColor }}
+                    />
+                    <span className="text-xs text-gray-500">Preview Color</span>
+                  </div>
+                )}
               </div>
             </Popup>
           </Marker>
