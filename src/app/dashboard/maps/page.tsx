@@ -1,8 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { 
   MapIcon, 
   EyeIcon, 
@@ -13,34 +12,22 @@ import {
   PencilIcon,
   TrashIcon,
   LockClosedIcon,
-  GlobeAltIcon,
-  Squares2X2Icon
+  GlobeAltIcon
 } from '@heroicons/react/24/outline';
 import CreateMapModal from '@/components/maps/CreateMapModal';
 import ShareModal, { ShareSettings } from '@/components/maps/ShareModal';
-import GlobeView from '@/components/maps/GlobeView';
 import { useUserMaps } from '@/hooks/useUserMaps';
 import { SharedMapService } from '@/lib/sharedMapService';
 import { deleteMap } from '@/lib/mapService';
 
-export default function MapsPage() {
-  const router = useRouter();
+export default function MyMapsPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [selectedMapId, setSelectedMapId] = useState<string>('');
   const [selectedMapTitle, setSelectedMapTitle] = useState<string>('');
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'cards' | 'globe'>('cards');
   const { maps, isLoading, error, refetch } = useUserMaps();
-
-  // Debug logging
-  console.log('Maps Page Debug:', { 
-    maps: maps?.length || 0, 
-    isLoading, 
-    error, 
-    viewMode 
-  });
 
   const handleCreateMap = () => {
     setShowCreateModal(true);
@@ -63,11 +50,6 @@ export default function MapsPage() {
     setOpenDropdownId(null);
   };
 
-  const handleEdit = (mapId: string) => {
-    router.push(`/maps/${mapId}`);
-    setOpenDropdownId(null);
-  };
-
   const handleDelete = (mapId: string, mapTitle: string) => {
     setSelectedMapId(mapId);
     setSelectedMapTitle(mapTitle);
@@ -79,8 +61,6 @@ export default function MapsPage() {
     try {
       await deleteMap(selectedMapId);
       setShowDeleteConfirm(false);
-      setSelectedMapId('');
-      setSelectedMapTitle('');
       refetch(); // Refresh the maps list
     } catch (error) {
       console.error('Error deleting map:', error);
@@ -100,16 +80,14 @@ export default function MapsPage() {
   };
 
   // Close dropdown when clicking outside
-  useEffect(() => {
+  React.useEffect(() => {
     const handleClickOutside = () => {
       setOpenDropdownId(null);
     };
-
-    if (openDropdownId) {
-      document.addEventListener('click', handleClickOutside);
-      return () => document.removeEventListener('click', handleClickOutside);
-    }
-  }, [openDropdownId]);
+    
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
 
   if (error) {
     return (
@@ -137,89 +115,40 @@ export default function MapsPage() {
 
   return (
     <div className="p-6">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">My Maps</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Create and manage your interactive maps
-          </p>
-          {/* Toggle buttons should appear below */}
-        </div>
-        
-        {/* Right side with toggle and create button */}
-        <div className="flex items-center space-x-4">
-          {/* View Toggle Buttons - Always visible */}
-          <div className="flex bg-gray-100 rounded-lg p-1 border">
-            <button
-              onClick={() => setViewMode('cards')}
-              className={`flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                viewMode === 'cards'
-                  ? 'bg-white text-gray-900 shadow'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-              title="Card View"
-            >
-              <Squares2X2Icon className="h-4 w-4 mr-2" />
-              Cards
-            </button>
-            <button
-              onClick={() => setViewMode('globe')}
-              className={`flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                viewMode === 'globe'
-                  ? 'bg-white text-gray-900 shadow'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-              title="3D Globe View"
-            >
-              <GlobeAltIcon className="h-4 w-4 mr-2" />
-              Globe
-            </button>
-          </div>
-          
-          {/* Create Button */}
-          <button
-            type="button"
-            onClick={handleCreateMap}
-            className="inline-flex items-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
-          >
-            <svg className="-ml-0.5 mr-1.5 h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
-            </svg>
-            Create New Map
-          </button>
-        </div>
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900">My Maps</h1>
+        <p className="mt-2 text-gray-600">
+          Create and manage your custom maps.
+        </p>
+      </div>
+
+      {/* Create New Map Button */}
+      <div className="mb-6">
+        <button 
+          onClick={handleCreateMap}
+          className="inline-flex items-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+        >
+          <svg className="-ml-0.5 mr-1.5 h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+          </svg>
+          Create New Map
+        </button>
       </div>
 
       {/* Loading State */}
       {isLoading && (
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {[...Array(6)].map((_, i) => (
-            <div key={i} className="bg-white overflow-hidden shadow rounded-lg animate-pulse">
-              <div className="p-6">
-                <div className="flex items-center mb-4">
-                  <div className="flex-shrink-0">
-                    <div className="h-8 w-8 bg-gray-300 rounded"></div>
-                  </div>
-                  <div className="ml-3 min-w-0 flex-1">
-                    <div className="h-5 bg-gray-300 rounded mb-2"></div>
-                    <div className="h-4 bg-gray-300 rounded w-3/4"></div>
-                  </div>
-                </div>
-                <div className="h-4 bg-gray-300 rounded mb-2"></div>
-                <div className="h-4 bg-gray-300 rounded w-2/3"></div>
-              </div>
-            </div>
-          ))}
+        <div className="text-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-2 text-sm text-gray-500">Loading your maps...</p>
         </div>
       )}
 
       {/* Maps Grid */}
-      {!isLoading && maps.length > 0 && viewMode === 'cards' && (
+      {!isLoading && maps.length > 0 && (
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {maps.map((map) => (
             <div key={map.id} className="bg-white overflow-hidden shadow rounded-lg hover:shadow-lg transition-shadow duration-200 relative">
-              {/* 3-Dots Menu - Outside of Link to avoid nesting */}
+              {/* 3-Dots Menu - Outside of Link */}
               <div className="absolute top-4 right-4 z-10">
                 <button
                   onClick={(e) => {
@@ -247,17 +176,14 @@ export default function MapsPage() {
                         <ShareIcon className="h-4 w-4 mr-3" />
                         Share
                       </button>
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          handleEdit(map.id!);
-                        }}
+                      <Link 
+                        href={`/dashboard/maps/${map.id}`}
                         className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        onClick={(e) => e.stopPropagation()}
                       >
                         <PencilIcon className="h-4 w-4 mr-3" />
                         Edit
-                      </button>
+                      </Link>
                       <button
                         onClick={(e) => {
                           e.preventDefault();
@@ -274,7 +200,7 @@ export default function MapsPage() {
                 )}
               </div>
 
-              <Link href={`/maps/${map.id}`}>
+              <Link href={`/dashboard/maps/${map.id}`}>
                 <div className="p-6">
                   {/* Header with Title and Privacy Badge */}
                   <div className="flex items-start justify-between mb-4">
@@ -358,26 +284,6 @@ export default function MapsPage() {
             </div>
           ))}
         </div>
-      )}
-
-      {/* Globe View */}
-      {!isLoading && viewMode === 'globe' && (
-        maps.length > 0 ? (
-          <GlobeView 
-            maps={maps}
-            className="mb-8"
-          />
-        ) : (
-          <div className="text-center py-12">
-            <div className="w-full h-96 bg-gray-100 rounded-lg flex items-center justify-center mb-4">
-              <div className="text-center">
-                <GlobeAltIcon className="mx-auto h-16 w-16 text-gray-400 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900">No maps to display on globe</h3>
-                <p className="text-sm text-gray-500">Create your first map to see it plotted on the 3D globe.</p>
-              </div>
-            </div>
-          </div>
-        )
       )}
 
       {/* Empty State */}

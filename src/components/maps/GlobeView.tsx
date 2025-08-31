@@ -101,7 +101,7 @@ export default function GlobeView({ maps, className = '', globeStyle = 'night' }
           .onPointClick((point: any) => {
             const map = point as MapDoc;
             if (map.id) {
-              router.push(`/maps/${map.id}`);
+              router.push(`/dashboard/maps/${map.id}`);
             }
           })
           .onPointHover((point: any, prevPoint: any) => {

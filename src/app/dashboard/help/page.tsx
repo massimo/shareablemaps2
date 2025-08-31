@@ -19,7 +19,7 @@ export default function HelpPage() {
             <div className="bg-white rounded-lg border border-gray-200 p-6">
               <h3 className="font-medium text-gray-900 mb-2">How do I create a new map?</h3>
               <p className="text-gray-600">
-                Go to "My Maps" and click the "Create New Map" button. You can then add markers, draw shapes, and customize your map.
+                Go to &ldquo;My Maps&rdquo; and click the &ldquo;Create New Map&rdquo; button. You can then add markers, draw shapes, and customize your map.
               </p>
             </div>
 
@@ -51,7 +51,7 @@ export default function HelpPage() {
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Need More Help?</h2>
           <div className="bg-blue-50 rounded-lg p-6">
             <p className="text-blue-900">
-              If you can't find what you're looking for in our FAQ, feel free to reach out for support.
+              If you can&apos;t find what you&apos;re looking for in our FAQ, feel free to reach out for support.
             </p>
             <button className="mt-4 inline-flex items-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500">
               Contact Support

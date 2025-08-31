@@ -80,7 +80,7 @@ export default function EditableMapTitle({ mapId }: EditableMapTitleProps) {
   };
 
   const handleBackToMaps = () => {
-    router.push('/maps');
+    router.push('/dashboard/maps');
   };
 
   return (
