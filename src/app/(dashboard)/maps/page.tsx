@@ -2,12 +2,31 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { MapIcon, EyeIcon, ChatBubbleLeftIcon, HeartIcon } from '@heroicons/react/24/outline';
+import { 
+  MapIcon, 
+  EyeIcon, 
+  ChatBubbleLeftIcon, 
+  HeartIcon,
+  EllipsisVerticalIcon,
+  ShareIcon,
+  PencilIcon,
+  TrashIcon,
+  LockClosedIcon,
+  GlobeAltIcon
+} from '@heroicons/react/24/outline';
 import CreateMapModal from '@/components/maps/CreateMapModal';
+import ShareModal, { ShareSettings } from '@/components/maps/ShareModal';
 import { useUserMaps } from '@/hooks/useUserMaps';
+import { SharedMapService } from '@/lib/sharedMapService';
+import { deleteMap } from '@/lib/mapService';
 
 export default function MyMapsPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [selectedMapId, setSelectedMapId] = useState<string>('');
+  const [selectedMapTitle, setSelectedMapTitle] = useState<string>('');
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const { maps, isLoading, error, refetch } = useUserMaps();
 
   const handleCreateMap = () => {
@@ -19,6 +38,56 @@ export default function MyMapsPage() {
     // Refresh maps list after creating a new map
     refetch();
   };
+
+  const handleDropdownToggle = (mapId: string) => {
+    setOpenDropdownId(openDropdownId === mapId ? null : mapId);
+  };
+
+  const handleShare = (mapId: string, mapTitle: string) => {
+    setSelectedMapId(mapId);
+    setSelectedMapTitle(mapTitle);
+    setShowShareModal(true);
+    setOpenDropdownId(null);
+  };
+
+  const handleDelete = (mapId: string, mapTitle: string) => {
+    setSelectedMapId(mapId);
+    setSelectedMapTitle(mapTitle);
+    setShowDeleteConfirm(true);
+    setOpenDropdownId(null);
+  };
+
+  const handleConfirmDelete = async () => {
+    try {
+      await deleteMap(selectedMapId);
+      setShowDeleteConfirm(false);
+      refetch(); // Refresh the maps list
+    } catch (error) {
+      console.error('Error deleting map:', error);
+      alert('Failed to delete map. Please try again.');
+    }
+  };
+
+  const handleShareSave = async (shareSettings: ShareSettings) => {
+    try {
+      await SharedMapService.updateShareSettings(selectedMapId, shareSettings);
+      console.log('Share settings saved:', shareSettings);
+      refetch(); // Refresh to show updated privacy badge
+    } catch (error) {
+      console.error('Error saving share settings:', error);
+      throw error;
+    }
+  };
+
+  // Close dropdown when clicking outside
+  React.useEffect(() => {
+    const handleClickOutside = () => {
+      setOpenDropdownId(null);
+    };
+    
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
 
   if (error) {
     return (
@@ -78,15 +147,64 @@ export default function MyMapsPage() {
       {!isLoading && maps.length > 0 && (
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {maps.map((map) => (
-            <div key={map.id} className="bg-white overflow-hidden shadow rounded-lg hover:shadow-lg transition-shadow duration-200">
+            <div key={map.id} className="bg-white overflow-hidden shadow rounded-lg hover:shadow-lg transition-shadow duration-200 relative">
+              {/* 3-Dots Menu - Outside of Link */}
+              <div className="absolute top-4 right-4 z-10">
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleDropdownToggle(map.id!);
+                  }}
+                  className="p-1 rounded-full hover:bg-gray-100 transition-colors"
+                >
+                  <EllipsisVerticalIcon className="h-5 w-5 text-gray-400" />
+                </button>
+                
+                {/* Dropdown Menu */}
+                {openDropdownId === map.id && (
+                  <div className="absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-20">
+                    <div className="py-1">
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleShare(map.id!, map.title);
+                        }}
+                        className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      >
+                        <ShareIcon className="h-4 w-4 mr-3" />
+                        Share
+                      </button>
+                      <Link 
+                        href={`/maps/${map.id}`}
+                        className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <PencilIcon className="h-4 w-4 mr-3" />
+                        Edit
+                      </Link>
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleDelete(map.id!, map.title);
+                        }}
+                        className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                      >
+                        <TrashIcon className="h-4 w-4 mr-3" />
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <Link href={`/maps/${map.id}`}>
                 <div className="p-6">
-                  {/* Map Icon */}
-                  <div className="flex items-center mb-4">
-                    <div className="flex-shrink-0">
-                      <MapIcon className="h-8 w-8 text-blue-600" />
-                    </div>
-                    <div className="ml-3 min-w-0 flex-1">
+                  {/* Header with Title and Privacy Badge */}
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="min-w-0 flex-1 mr-12">
                       <h3 className="text-lg font-medium text-gray-900 truncate">
                         {map.title}
                       </h3>
@@ -94,6 +212,21 @@ export default function MyMapsPage() {
                         <p className="text-sm text-gray-500 truncate">
                           📍 {map.mainLocation.city}
                         </p>
+                      )}
+                    </div>
+                    
+                    {/* Privacy Badge - Positioned to avoid 3-dots menu */}
+                    <div className="flex-shrink-0 mr-10">
+                      {map.shareSettings?.isEnabled && map.shareSettings.shareType !== 'private' ? (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          <GlobeAltIcon className="h-3 w-3 mr-1" />
+                          {map.shareSettings.shareType === 'password' ? 'Protected' : 'Public'}
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                          <LockClosedIcon className="h-3 w-3 mr-1" />
+                          Private
+                        </span>
                       )}
                     </div>
                   </div>
@@ -194,6 +327,60 @@ export default function MyMapsPage() {
         isOpen={showCreateModal}
         onClose={handleModalClose}
       />
+
+      {/* Share Modal */}
+      {showShareModal && selectedMapId && (
+        <ShareModal
+          mapId={selectedMapId}
+          mapTitle={selectedMapTitle}
+          isOpen={showShareModal}
+          onClose={() => {
+            setShowShareModal(false);
+            setSelectedMapId('');
+            setSelectedMapTitle('');
+          }}
+          onSave={handleShareSave}
+        />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-75 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div className="mt-3 text-center">
+              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
+                <TrashIcon className="h-6 w-6 text-red-600" />
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mt-4">
+                Delete Map
+              </h3>
+              <div className="mt-2 px-7 py-3">
+                <p className="text-sm text-gray-500">
+                  Are you sure you want to delete "{selectedMapTitle}"? This action cannot be undone.
+                </p>
+              </div>
+              <div className="flex justify-center space-x-4 mt-4">
+                <button
+                  onClick={() => {
+                    setShowDeleteConfirm(false);
+                    setSelectedMapId('');
+                    setSelectedMapTitle('');
+                  }}
+                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmDelete}
+                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
