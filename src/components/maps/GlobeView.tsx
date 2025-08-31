@@ -24,24 +24,9 @@ export default function GlobeView({ maps, className = '', globeStyle = 'night' }
     map.mainLocation?.lng != null
   );
 
-  // Show message if no valid maps
-  if (validMaps.length === 0) {
-    return (
-      <div className={`flex items-center justify-center h-96 ${className}`}>
-        <div className="text-center">
-          <div className="text-gray-400 mb-4">
-            <GlobeAltIcon className="mx-auto h-12 w-12" />
-          </div>
-          <h3 className="text-lg font-medium text-gray-900">No maps with locations</h3>
-          <p className="mt-1 text-sm text-gray-500">
-            Maps need to have a main location set to appear on the 3D globe.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   useEffect(() => {
+    if (validMaps.length === 0) return;
+    
     let isMounted = true;
 
     const initGlobe = async () => {
@@ -71,8 +56,8 @@ export default function GlobeView({ maps, className = '', globeStyle = 'night' }
           .pointsData(validMaps)
           .pointLat((d: any) => (d as MapDoc).mainLocation!.lat)
           .pointLng((d: any) => (d as MapDoc).mainLocation!.lng)
-          .pointAltitude(0.02)
-          .pointRadius(0.15)
+          .pointAltitude(0.03)
+          .pointRadius(0.25)
           .pointColor(() => '#3b82f6') // Blue color
           .pointLabel((d: any) => {
             const map = d as MapDoc;
@@ -113,11 +98,11 @@ export default function GlobeView({ maps, className = '', globeStyle = 'night' }
           .pointsMerge(false) // Keep separate for click events
           .pointsTransitionDuration(1000);
 
-        // Set initial camera position
-        globe.pointOfView({ lat: 30, lng: 0, altitude: 2.5 }, 1000);
+        // Set initial camera position - closer zoom
+        globe.pointOfView({ lat: 30, lng: 0, altitude: 1.8 }, 1000);
 
-        // Enable auto-rotation
-        globe.controls().autoRotate = true;
+        // Disable auto-rotation
+        globe.controls().autoRotate = false;
         globe.controls().autoRotateSpeed = 0.5;
 
         // Handle window resize
@@ -176,6 +161,23 @@ export default function GlobeView({ maps, className = '', globeStyle = 'night' }
       globeRef.current.pointsData(currentValidMaps);
     }
   }, [maps, isLoading]);
+
+  // Show message if no valid maps
+  if (validMaps.length === 0) {
+    return (
+      <div className={`flex items-center justify-center h-96 ${className}`}>
+        <div className="text-center">
+          <div className="text-gray-400 mb-4">
+            <GlobeAltIcon className="mx-auto h-12 w-12" />
+          </div>
+          <h3 className="text-lg font-medium text-gray-900">No maps with locations</h3>
+          <p className="mt-1 text-sm text-gray-500">
+            Maps need to have a main location set to appear on the 3D globe.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (error) {
     return (

@@ -140,7 +140,7 @@ export default function MarkerSearch({ markers, onMarkerSelect, className = '' }
               </div>
             ) : (
               <div className="px-4 py-6 text-center text-sm text-gray-500">
-                No markers found for "{searchTerm}"
+                No markers found for &ldquo;{searchTerm}&rdquo;
               </div>
             )}
           </div>

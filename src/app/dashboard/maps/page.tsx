@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { 
-  MapIcon, 
   EyeIcon, 
   ChatBubbleLeftIcon, 
   HeartIcon,
@@ -16,6 +15,7 @@ import {
 } from '@heroicons/react/24/outline';
 import CreateMapModal from '@/components/maps/CreateMapModal';
 import ShareModal, { ShareSettings } from '@/components/maps/ShareModal';
+import GlobeView from '@/components/maps/GlobeView';
 import { useUserMaps } from '@/hooks/useUserMaps';
 import { SharedMapService } from '@/lib/sharedMapService';
 import { deleteMap } from '@/lib/mapService';
@@ -286,6 +286,22 @@ export default function MyMapsPage() {
         </div>
       )}
 
+      {/* 3D Globe View */}
+      {!isLoading && maps.length > 0 && (
+        <div className="mt-12">
+          <div className="mb-6">
+            <h2 className="text-xl font-semibold text-gray-900">3D Globe View</h2>
+            <p className="mt-1 text-sm text-gray-500">
+              Explore your maps on an interactive 3D globe
+            </p>
+          </div>
+          <GlobeView 
+            maps={maps}
+            className="rounded-lg border border-gray-200"
+          />
+        </div>
+      )}
+
       {/* Empty State */}
       {!isLoading && maps.length === 0 && (
         <div className="text-center">
@@ -356,7 +372,7 @@ export default function MyMapsPage() {
               </h3>
               <div className="mt-2 px-7 py-3">
                 <p className="text-sm text-gray-500">
-                  Are you sure you want to delete "{selectedMapTitle}"? This action cannot be undone.
+                  Are you sure you want to delete &ldquo;{selectedMapTitle}&rdquo;? This action cannot be undone.
                 </p>
               </div>
               <div className="flex justify-center space-x-4 mt-4">

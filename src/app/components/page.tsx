@@ -118,7 +118,7 @@ function DemoMenu() {
             <Menu.Item>
               {({ active }) => (
                 <button
-                  className={`$ {active ? "bg-blue-100 text-blue-900" : "text-gray-700"} group flex w-full items-center px-4 py-2 text-sm`}
+                  className={`${active ? "bg-blue-100 text-blue-900" : "text-gray-700"} group flex w-full items-center px-4 py-2 text-sm`}
                 >
                   Account settings
                 </button>
@@ -127,7 +127,7 @@ function DemoMenu() {
             <Menu.Item>
               {({ active }) => (
                 <button
-                  className={`$ {active ? "bg-blue-100 text-blue-900" : "text-gray-700"} group flex w-full items-center px-4 py-2 text-sm`}
+                  className={`${active ? "bg-blue-100 text-blue-900" : "text-gray-700"} group flex w-full items-center px-4 py-2 text-sm`}
                 >
                   Support
                 </button>
