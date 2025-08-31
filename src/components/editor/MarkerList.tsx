@@ -1,9 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { TrashIcon, PencilIcon, MapPinIcon } from '@heroicons/react/24/outline';
 import { MarkerDoc } from '@/types';
 import { getCategoryById } from '@/lib/categories';
+import ImageViewerModal from './ImageViewerModal';
 
 interface MarkerListProps {
   markers: MarkerDoc[];
@@ -22,6 +23,17 @@ export default function MarkerList({
   selectedMarkerId,
   viewMode = 'expanded',
 }: MarkerListProps) {
+  const [imageViewerOpen, setImageViewerOpen] = useState(false);
+  const [selectedImages, setSelectedImages] = useState<string[]>([]);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [selectedMarkerTitle, setSelectedMarkerTitle] = useState('');
+
+  const openImageViewer = (images: string[], initialIndex: number = 0, markerTitle: string) => {
+    setSelectedImages(images);
+    setSelectedImageIndex(initialIndex);
+    setSelectedMarkerTitle(markerTitle);
+    setImageViewerOpen(true);
+  };
   if (markers.length === 0) {
     return (
       <div className="p-4 text-center">
@@ -108,6 +120,37 @@ export default function MarkerList({
                       {marker.description}
                     </p>
                   )}
+                  {marker.images && marker.images.length > 0 && (
+                    <div className="mt-2 flex space-x-1">
+                      {marker.images.slice(0, 3).map((image, index) => (
+                        <button
+                          key={index}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openImageViewer(marker.images!, index, marker.title);
+                          }}
+                          className="w-8 h-8 rounded-md overflow-hidden bg-gray-100 flex-shrink-0 hover:ring-2 hover:ring-blue-500 transition-all"
+                        >
+                          <img
+                            src={image}
+                            alt={`${marker.title} image ${index + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                        </button>
+                      ))}
+                      {marker.images.length > 3 && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openImageViewer(marker.images!, 3, marker.title);
+                          }}
+                          className="w-8 h-8 rounded-md bg-gray-200 flex items-center justify-center flex-shrink-0 hover:bg-gray-300 transition-colors"
+                        >
+                          <span className="text-xs text-gray-500">+{marker.images.length - 3}</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </>
               )}
             </div>
@@ -139,6 +182,15 @@ export default function MarkerList({
           </div>
         </div>
       ))}
+      
+      {/* Image Viewer Modal */}
+      <ImageViewerModal
+        isOpen={imageViewerOpen}
+        onClose={() => setImageViewerOpen(false)}
+        images={selectedImages}
+        initialIndex={selectedImageIndex}
+        title={selectedMarkerTitle}
+      />
     </div>
   );
 }

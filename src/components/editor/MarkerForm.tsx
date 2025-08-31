@@ -2,16 +2,26 @@
 
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { markerSchema, MarkerForm as MarkerFormType } from '@/lib/validators';
 import { MarkerDoc } from '@/types';
-import { XMarkIcon, PhotoIcon, TagIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, TagIcon } from '@heroicons/react/24/outline';
 import CategorySelectionModal from './CategorySelectionModal';
+import ImageUpload from './ImageUpload';
 import { getCategoryById } from '@/lib/categories';
 
 interface MarkerFormProps {
   marker?: MarkerDoc;
-  onSave: (data: { title: string; categoryId?: string; address?: string; description?: string; tips: string[]; lat: number; lng: number; color?: string; markerType?: 'pin' | 'circle' }) => void;
+  onSave: (data: { 
+    title: string; 
+    categoryId?: string; 
+    address?: string; 
+    description?: string; 
+    tips: string[]; 
+    images: string[];
+    lat: number; 
+    lng: number; 
+    color?: string; 
+    markerType?: 'pin' | 'circle' 
+  }) => void;
   onCancel: () => void;
   defaultPosition?: { lat: number; lng: number; address?: string };
   onColorChange?: (color: string) => void;
@@ -24,6 +34,7 @@ interface FormData {
   address?: string;
   description?: string;
   tips: string;
+  images: string[];
   color?: string;
   markerType?: 'pin' | 'circle';
 }
@@ -65,6 +76,7 @@ export default function MarkerForm({
       address: marker.address || '',
       description: marker.description || '',
       tips: marker.tips?.join('\n') || '',
+      images: marker.images || [],
       color: marker.icon?.color || colorOptions[0].value,
       markerType: marker.icon?.markerType || 'pin',
     } : {
@@ -73,6 +85,7 @@ export default function MarkerForm({
       address: defaultPosition?.address || '',
       description: '',
       tips: '',
+      images: [],
       color: colorOptions[0].value, // Default to red
       markerType: 'pin' as const, // Default to pin
     },
@@ -81,6 +94,7 @@ export default function MarkerForm({
   const selectedColor = watch('color');
   const selectedMarkerType = watch('markerType');
   const selectedCategoryId = watch('categoryId');
+  const watchedImages = watch('images');
 
   const handleColorSelect = (color: string) => {
     setValue('color', color);
@@ -96,6 +110,10 @@ export default function MarkerForm({
     setValue('categoryId', categoryId);
   };
 
+  const handleImagesChange = (images: string[]) => {
+    setValue('images', images);
+  };
+
   const onSubmit = (data: FormData) => {
     const position = marker ? { lat: marker.lat, lng: marker.lng } : defaultPosition;
     if (!position) {
@@ -107,6 +125,7 @@ export default function MarkerForm({
       ...data,
       categoryId: data.categoryId && data.categoryId.trim() ? data.categoryId : undefined,
       tips: data.tips ? data.tips.split('\n').map(tip => tip.trim()).filter(Boolean) : [],
+      images: data.images || [],
       lat: position.lat,
       lng: position.lng,
       color: data.color,
@@ -313,12 +332,12 @@ export default function MarkerForm({
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Images
           </label>
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
-            <PhotoIcon className="mx-auto h-8 w-8 text-gray-400" />
-            <p className="mt-2 text-sm text-gray-500">
-              Image upload coming soon
-            </p>
-          </div>
+          <ImageUpload
+            images={watchedImages}
+            onImagesChange={handleImagesChange}
+            maxImages={5}
+            disabled={isSubmitting}
+          />
         </div>
 
         {/* Form Actions */}

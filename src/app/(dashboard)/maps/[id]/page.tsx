@@ -327,7 +327,18 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
     }
   }, [id]);
 
-    const handleMarkerSave = useCallback(async (data: any) => {
+    const handleMarkerSave = useCallback(async (data: {
+    title: string; 
+    categoryId?: string; 
+    address?: string; 
+    description?: string; 
+    tips: string[]; 
+    images: string[];
+    lat: number; 
+    lng: number; 
+    color?: string; 
+    markerType?: 'pin' | 'circle'
+  }) => {
     try {
       const currentUser = auth.currentUser;
       const userId = currentUser?.uid || 'anonymous-user'; // Fallback for development
@@ -343,6 +354,7 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
         address: data.address,
         description: data.description,
         tips: data.tips || [],
+        images: data.images || [],
         icon: {
           library: 'default' as const,
           name: 'marker',
@@ -392,11 +404,10 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
       setPendingMarkerType('pin'); // Reset to default marker type
     } catch (error) {
       console.error('Error saving marker:', error);
-      const err = error as any;
+      const err = error as Error;
       console.error('Full error details:', {
         name: err.name,
         message: err.message,
-        code: err.code,
         stack: err.stack
       });
       // TODO: Show error toast/notification
