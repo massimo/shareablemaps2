@@ -2,6 +2,7 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import dynamic from 'next/dynamic';
+import L from 'leaflet'; // Import Leaflet for map reference type
 import { Timestamp } from 'firebase/firestore';
 import { MarkerDoc } from '@/types';
 import MarkerList from '@/components/editor/MarkerList';
@@ -42,6 +43,7 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
   const [pendingMarkerType, setPendingMarkerType] = useState<'pin' | 'circle'>('pin'); // Default pin
   const [isLoadingMap, setIsLoadingMap] = useState(true);
   const [mapError, setMapError] = useState<string | null>(null);
+  const mapRef = React.useRef<L.Map | null>(null); // Add map reference for programmatic control
 
   const { setMapCenter, setMapZoom, setMapTitle, mapTitle, mapCenter } = useMapStore();
   
@@ -268,7 +270,23 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
 
   const handleMarkerSelect = useCallback((marker: MarkerDoc) => {
     setSelectedMarkerId(marker.id);
-    // TODO: Center map on marker
+    
+    // Center and zoom to the selected marker with smooth animation
+    if (mapRef.current && marker.lat && marker.lng) {
+      console.log('Centering map on marker:', marker.title, `(${marker.lat}, ${marker.lng})`);
+      
+      // Animate to marker position with a nice zoom level
+      mapRef.current.flyTo([marker.lat, marker.lng], 16, {
+        animate: true,
+        duration: 1.5, // 1.5 seconds animation
+      });
+    }
+  }, []);
+
+  // Handle map ready callback to store map reference
+  const handleMapReady = useCallback((map: L.Map) => {
+    mapRef.current = map;
+    console.log('Map instance ready and stored in ref');
   }, []);
 
   return (
@@ -403,11 +421,13 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
           <div className="flex-1">
             <MapCanvas
               onMapClick={handleMapClick}
+              onMapReady={handleMapReady}
               className="h-full"
               markers={markers}
               pendingPosition={pendingPosition}
               pendingColor={pendingColor}
               pendingMarkerType={pendingMarkerType}
+              selectedMarkerId={selectedMarkerId}
             />
           </div>
         </>

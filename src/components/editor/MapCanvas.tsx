@@ -25,6 +25,7 @@ interface MapCanvasProps {
   pendingPosition?: { lat: number; lng: number; address?: string };
   pendingColor?: string;
   pendingMarkerType?: 'pin' | 'circle';
+  selectedMarkerId?: string; // Add selected marker ID for highlighting
 }
 
 function MapController({ 
@@ -77,12 +78,13 @@ export default function MapCanvas({
   pendingPosition,
   pendingColor,
   pendingMarkerType = 'pin',
+  selectedMarkerId, // Add selected marker ID
 }: MapCanvasProps) {
   const mapRef = useRef<L.Map | null>(null);
   const { mapCenter, mapZoom } = useMapStore();
 
   // Function to create colored marker icons using SVG data URLs for accurate colors
-  const createColoredIcon = React.useCallback((color?: string, markerType: 'pin' | 'circle' = 'pin') => {
+  const createColoredIcon = React.useCallback((color?: string, markerType: 'pin' | 'circle' = 'pin', isSelected: boolean = false) => {
     if (!color) {
       // Default red marker
       return new L.Icon({
@@ -101,27 +103,36 @@ export default function MapCanvas({
     let iconAnchor: [number, number];
 
     if (markerType === 'circle') {
-      // Create simple circle marker
+      // Create simple circle marker with optional highlight ring
+      const circleRadius = isSelected ? 10 : 8;
+      const strokeWidth = isSelected ? 3 : 2;
+      const totalSize = isSelected ? 26 : 20;
+      
       svgIcon = `
-        <svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="10" cy="10" r="8" fill="${color}" stroke="#fff" stroke-width="2"/>
+        <svg width="${totalSize}" height="${totalSize}" viewBox="0 0 ${totalSize} ${totalSize}" xmlns="http://www.w3.org/2000/svg">
+          ${isSelected ? `<circle cx="${totalSize/2}" cy="${totalSize/2}" r="12" fill="none" stroke="#2563eb" stroke-width="2" opacity="0.6"/>` : ''}
+          <circle cx="${totalSize/2}" cy="${totalSize/2}" r="${circleRadius}" fill="${color}" stroke="#fff" stroke-width="${strokeWidth}"/>
         </svg>
       `;
-      iconSize = [20, 20];
-      iconAnchor = [10, 10];
+      iconSize = [totalSize, totalSize];
+      iconAnchor = [totalSize/2, totalSize/2];
     } else {
-      // Create traditional pin marker
+      // Create traditional pin marker with optional highlight
+      const pinWidth = isSelected ? 30 : 25;
+      const pinHeight = isSelected ? 46 : 41;
+      
       svgIcon = `
-        <svg width="25" height="41" viewBox="0 0 25 41" xmlns="http://www.w3.org/2000/svg">
-          <path d="M12.5 0C5.596 0 0 5.596 0 12.5c0 8.125 12.5 28.5 12.5 28.5S25 20.625 25 12.5C25 5.596 19.404 0 12.5 0z" 
+        <svg width="${pinWidth}" height="${pinHeight}" viewBox="0 0 ${pinWidth} ${pinHeight}" xmlns="http://www.w3.org/2000/svg">
+          ${isSelected ? `<path d="M${pinWidth/2} 0C${5.596 * pinWidth/25} 0 0 ${5.596 * pinHeight/41} 0 ${12.5 * pinHeight/41}c0 ${8.125 * pinHeight/41} ${pinWidth/2} ${28.5 * pinHeight/41} ${pinWidth/2} ${28.5 * pinHeight/41}S${pinWidth} ${20.625 * pinHeight/41} ${pinWidth} ${12.5 * pinHeight/41}C${pinWidth} ${5.596 * pinHeight/41} ${19.404 * pinWidth/25} 0 ${pinWidth/2} 0z" fill="none" stroke="#2563eb" stroke-width="3" opacity="0.6"/>` : ''}
+          <path d="M${pinWidth/2} 0C${5.596 * pinWidth/25} 0 0 ${5.596 * pinHeight/41} 0 ${12.5 * pinHeight/41}c0 ${8.125 * pinHeight/41} ${pinWidth/2} ${28.5 * pinHeight/41} ${pinWidth/2} ${28.5 * pinHeight/41}S${pinWidth} ${20.625 * pinHeight/41} ${pinWidth} ${12.5 * pinHeight/41}C${pinWidth} ${5.596 * pinHeight/41} ${19.404 * pinWidth/25} 0 ${pinWidth/2} 0z" 
                 fill="${color}" 
                 stroke="#fff" 
                 stroke-width="1"/>
-          <circle cx="12.5" cy="12.5" r="4" fill="#fff"/>
+          <circle cx="${pinWidth/2}" cy="${12.5 * pinHeight/41}" r="4" fill="#fff"/>
         </svg>
       `;
-      iconSize = [25, 41];
-      iconAnchor = [12, 41];
+      iconSize = [pinWidth, pinHeight];
+      iconAnchor = [pinWidth/2, pinHeight];
     }
     
     const svgUrl = `data:image/svg+xml;base64,${btoa(svgIcon)}`;
@@ -178,34 +189,37 @@ export default function MapCanvas({
         />
         
         {/* Existing Markers */}
-        {markers.map((marker) => (
-          <Marker
-            key={marker.id}
-            position={[marker.lat, marker.lng]}
-            icon={createColoredIcon(marker.icon?.color, marker.icon?.markerType)}
-          >
-            <Popup>
-              <div className="min-w-0">
-                <h3 className="font-semibold text-sm">{marker.title}</h3>
-                {marker.address && (
-                  <p className="text-xs text-gray-600 mt-1">{marker.address}</p>
-                )}
-                {marker.description && (
-                  <p className="text-xs text-gray-800 mt-2">{marker.description}</p>
-                )}
-                {marker.icon?.color && (
-                  <div className="mt-2 flex items-center">
-                    <div 
-                      className="w-3 h-3 rounded-full border border-gray-300 mr-2"
-                      style={{ backgroundColor: marker.icon.color }}
-                    />
-                    <span className="text-xs text-gray-500">Custom Color</span>
-                  </div>
-                )}
-              </div>
-            </Popup>
-          </Marker>
-        ))}
+        {markers.map((marker) => {
+          const isSelected = selectedMarkerId === marker.id;
+          return (
+            <Marker
+              key={marker.id}
+              position={[marker.lat, marker.lng]}
+              icon={createColoredIcon(marker.icon?.color, marker.icon?.markerType, isSelected)}
+            >
+              <Popup>
+                <div className="min-w-0">
+                  <h3 className="font-semibold text-sm">{marker.title}</h3>
+                  {marker.address && (
+                    <p className="text-xs text-gray-600 mt-1">{marker.address}</p>
+                  )}
+                  {marker.description && (
+                    <p className="text-xs text-gray-800 mt-2">{marker.description}</p>
+                  )}
+                  {marker.icon?.color && (
+                    <div className="mt-2 flex items-center">
+                      <div 
+                        className="w-3 h-3 rounded-full border border-gray-300 mr-2"
+                        style={{ backgroundColor: marker.icon.color }}
+                      />
+                      <span className="text-xs text-gray-500">Custom Color</span>
+                    </div>
+                  )}
+                </div>
+              </Popup>
+            </Marker>
+          );
+        })}
         
         {/* Pending Marker (when creating/editing) */}
         {pendingPosition && (
