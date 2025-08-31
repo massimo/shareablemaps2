@@ -27,17 +27,27 @@ interface MapCanvasProps {
   pendingColor?: string;
   pendingMarkerType?: 'pin' | 'circle';
   selectedMarkerId?: string; // Add selected marker ID for highlighting
+  center?: [number, number]; // Override center from store
+  zoom?: number; // Override zoom from store
 }
 
 function MapController({ 
   onMapClick, 
-  onMapReady 
+  onMapReady,
+  overrideCenter,
+  overrideZoom
 }: { 
   onMapClick?: (e: L.LeafletMouseEvent) => void; 
   onMapReady?: (map: L.Map) => void;
+  overrideCenter?: [number, number];
+  overrideZoom?: number;
 }) {
   const map = useMap();
   const { mapCenter, mapZoom } = useMapStore();
+
+  // Use override values if provided, otherwise use store values
+  const effectiveCenter = overrideCenter || mapCenter;
+  const effectiveZoom = overrideZoom || mapZoom;
 
   // Handle map ready callback
   useEffect(() => {
@@ -63,10 +73,10 @@ function MapController({
 
   // Update map view when store values change
   useEffect(() => {
-    if (map && mapCenter) {
-      map.setView(mapCenter, mapZoom, { animate: true });
+    if (map && effectiveCenter) {
+      map.setView(effectiveCenter, effectiveZoom, { animate: true });
     }
-  }, [map, mapCenter, mapZoom]);
+  }, [map, effectiveCenter, effectiveZoom]);
 
   return null;
 }
@@ -81,9 +91,15 @@ export default function MapCanvas({
   pendingColor,
   pendingMarkerType = 'pin',
   selectedMarkerId, // Add selected marker ID
+  center, // Override center
+  zoom, // Override zoom
 }: MapCanvasProps) {
   const mapRef = useRef<L.Map | null>(null);
   const { mapCenter, mapZoom } = useMapStore();
+
+  // Use override values if provided, otherwise use store values
+  const effectiveCenter = center || mapCenter;
+  const effectiveZoom = zoom || mapZoom;
 
   // Function to create colored marker icons using SVG data URLs for accurate colors
   const createColoredIcon = React.useCallback((color?: string, markerType: 'pin' | 'circle' = 'pin', isSelected: boolean = false) => {
@@ -174,8 +190,8 @@ export default function MapCanvas({
   return (
     <div className={className} style={{ position: 'relative', zIndex: 1 }}>
       <MapContainer
-        center={mapCenter}
-        zoom={mapZoom}
+        center={effectiveCenter}
+        zoom={effectiveZoom}
         className="h-full w-full"
         style={{ zIndex: 1 }}
         ref={(mapInstance) => {
@@ -268,7 +284,9 @@ export default function MapCanvas({
               console.error('Invalid click event structure:', e);
             }
           } : undefined} 
-          onMapReady={onMapReady} 
+          onMapReady={onMapReady}
+          overrideCenter={center}
+          overrideZoom={zoom}
         />
       </MapContainer>
     </div>

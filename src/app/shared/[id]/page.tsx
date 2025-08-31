@@ -89,15 +89,49 @@ export default function SharedMapPage({ params }: SharedMapPageProps) {
           setMapTitle(result.map.title);
           setAccessGranted(true);
           
-          // Set map center and zoom
-          if (result.map.mainLocation) {
-            setMapCenter([result.map.mainLocation.lat, result.map.mainLocation.lng]);
-            setMapZoom(16);
-          }
-
-          // Load markers
+          // Load markers first to determine map center
           const markersData = await MarkerService.getMarkersByMapId(id);
           setMarkers(markersData);
+          
+          // Set map center and zoom based on available data
+          if (result.map.mainLocation) {
+            // Use the map's main location if available
+            console.log('Using main location:', result.map.mainLocation);
+            setMapCenter([result.map.mainLocation.lat, result.map.mainLocation.lng]);
+            setMapZoom(16);
+          } else if (markersData.length > 0) {
+            // Calculate center from markers if no main location
+            console.log('Calculating center from markers:', markersData.length, 'markers');
+            if (markersData.length === 1) {
+              // Single marker - center on it
+              console.log('Single marker center:', markersData[0].lat, markersData[0].lng);
+              setMapCenter([markersData[0].lat, markersData[0].lng]);
+              setMapZoom(16);
+            } else {
+              // Multiple markers - calculate bounding box center
+              const lats = markersData.map(m => m.lat);
+              const lngs = markersData.map(m => m.lng);
+              const centerLat = (Math.min(...lats) + Math.max(...lats)) / 2;
+              const centerLng = (Math.min(...lngs) + Math.max(...lngs)) / 2;
+              console.log('Multiple markers center:', centerLat, centerLng);
+              setMapCenter([centerLat, centerLng]);
+              
+              // Adjust zoom based on marker spread
+              const latRange = Math.max(...lats) - Math.min(...lats);
+              const lngRange = Math.max(...lngs) - Math.min(...lngs);
+              const maxRange = Math.max(latRange, lngRange);
+              
+              if (maxRange < 0.01) setMapZoom(16);      // Very close markers
+              else if (maxRange < 0.1) setMapZoom(13);   // City level
+              else if (maxRange < 1) setMapZoom(10);     // Region level
+              else setMapZoom(8);                        // Country level
+              
+              console.log('Calculated zoom:', maxRange < 0.01 ? 16 : maxRange < 0.1 ? 13 : maxRange < 1 ? 10 : 8);
+            }
+          } else {
+            console.log('No main location or markers, using default center');
+          }
+          // If no mainLocation and no markers, keep default center
 
           // Initialize category filter
           const categoriesInMarkers = new Set<string>();
@@ -355,6 +389,8 @@ export default function SharedMapPage({ params }: SharedMapPageProps) {
           className="h-full"
           markers={markers}
           selectedMarkerId={selectedMarkerId}
+          center={mapCenter}
+          zoom={mapZoom}
         />
         
         {/* Marker Card Overlay */}
