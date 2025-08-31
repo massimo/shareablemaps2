@@ -13,10 +13,10 @@ import {
 } from '@heroicons/react/24/outline';
 
 const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: ChartBarIcon },
-  { name: 'My Maps', href: '/maps', icon: MapIcon },
-  { name: 'Shared with me', href: '/shared', icon: ShareIcon },
-  { name: 'Help', href: '/help', icon: QuestionMarkCircleIcon },
+  { name: 'Dashboard', href: '/dashboard/dashboard', icon: ChartBarIcon },
+  { name: 'My Maps', href: '/dashboard/maps', icon: MapIcon },
+  { name: 'Shared with me', href: '/dashboard/shared', icon: ShareIcon },
+  { name: 'Help', href: '/dashboard/help', icon: QuestionMarkCircleIcon },
 ];
 
 function classNames(...classes: string[]) {

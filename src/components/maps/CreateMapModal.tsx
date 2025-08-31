@@ -82,7 +82,7 @@ export default function CreateMapModal({ isOpen, onClose }: CreateMapModalProps)
       });
 
       // Navigate to the new map editor with just the map ID
-      router.push(`/maps/${mapId}`);
+      router.push(`/dashboard/maps/${mapId}`);
       
       // Close modal and reset form
       handleClose();

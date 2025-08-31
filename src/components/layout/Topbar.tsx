@@ -10,7 +10,7 @@ export default function Topbar() {
   const pathname = usePathname();
   
   // Check if we're in a map editor page
-  const isMapEditor = pathname?.startsWith('/maps/') && pathname !== '/maps';
+  const isMapEditor = pathname?.startsWith('/dashboard/maps/') && pathname !== '/dashboard/maps';
   const mapId = isMapEditor ? pathname?.split('/')[2] : null;
 
   return (

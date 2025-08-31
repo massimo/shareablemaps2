@@ -177,7 +177,7 @@ export default function MyMapsPage() {
                         Share
                       </button>
                       <Link 
-                        href={`/maps/${map.id}`}
+                        href={`/dashboard/maps/${map.id}`}
                         className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                         onClick={(e) => e.stopPropagation()}
                       >
@@ -200,7 +200,7 @@ export default function MyMapsPage() {
                 )}
               </div>
 
-              <Link href={`/maps/${map.id}`}>
+              <Link href={`/dashboard/maps/${map.id}`}>
                 <div className="p-6">
                   {/* Header with Title and Privacy Badge */}
                   <div className="flex items-start justify-between mb-4">
