@@ -482,9 +482,9 @@ export default function SharedMapPage({ params }: SharedMapPageProps) {
             zoom={mapZoom}
           />
           
-          {/* Marker Card Overlay - Responsive */}
+          {/* Marker Card Overlay - Responsive with higher z-index */}
           {selectedMarker && (
-            <div className="absolute inset-x-4 top-4 sm:top-4 sm:right-4 sm:left-auto sm:w-80 sm:max-w-[calc(100vw-2rem)] z-[1000]">
+            <div className="absolute inset-x-4 top-4 sm:top-4 sm:right-4 sm:left-auto sm:w-80 sm:max-w-[calc(100vw-2rem)] z-[2500]">
               <MarkerCard
                 marker={selectedMarker}
                 onClose={handleMarkerCardClose}
