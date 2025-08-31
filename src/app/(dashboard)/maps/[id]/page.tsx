@@ -66,14 +66,37 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
     return Array.from(categories);
   }, [markers]);
 
+  // Check if there are markers without categories
+  const hasUncategorizedMarkers = React.useMemo(() => {
+    return markers.some(marker => !marker.categoryId);
+  }, [markers]);
+
   const filteredMarkers = React.useMemo(() => {
     if (selectedCategories.length === 0) {
       return markers; // Show all markers if no filter is applied
     }
-    return markers.filter(marker => 
-      marker.categoryId && selectedCategories.includes(marker.categoryId)
-    );
-  }, [markers, selectedCategories]);
+    
+    const hasUncategorizedSelected = selectedCategories.includes('uncategorized');
+    
+    // Check if ALL available categories (including uncategorized if it exists) are selected
+    const allCategoriesSelected = availableCategories.every(cat => selectedCategories.includes(cat));
+    const allOptionsSelected = allCategoriesSelected && (!hasUncategorizedMarkers || hasUncategorizedSelected);
+    
+    // If all available options are selected, show all markers (including uncategorized)
+    if (allOptionsSelected) {
+      return markers;
+    }
+    
+    // Filter by selected categories only
+    return markers.filter(marker => {
+      // If marker has no category, include it only if 'uncategorized' is selected
+      if (!marker.categoryId) {
+        return hasUncategorizedSelected;
+      }
+      // If marker has a category, include it only if that category is selected
+      return selectedCategories.includes(marker.categoryId);
+    });
+  }, [markers, selectedCategories, availableCategories, hasUncategorizedMarkers]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -115,14 +138,18 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
           setMarkers(markersData);
           console.log('Markers loaded successfully:', markersData.length, 'markers');
           
-          // Initialize category filter to show all available categories
+          // Initialize category filter to show all available categories plus uncategorized if exists
           const categoriesInMarkers = new Set<string>();
           markersData.forEach(marker => {
             if (marker.categoryId) {
               categoriesInMarkers.add(marker.categoryId);
             }
           });
-          setSelectedCategories(Array.from(categoriesInMarkers));
+          const hasUncategorized = markersData.some(marker => !marker.categoryId);
+          const initialCategories = hasUncategorized 
+            ? [...Array.from(categoriesInMarkers), 'uncategorized']
+            : Array.from(categoriesInMarkers);
+          setSelectedCategories(initialCategories);
         } else {
           // Map not found
           console.error('Map not found:', id);
@@ -152,7 +179,11 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
               categoriesInMarkers.add(marker.categoryId);
             }
           });
-          setSelectedCategories(Array.from(categoriesInMarkers));
+          const hasUncategorized = markersData.some(marker => !marker.categoryId);
+          const initialCategories = hasUncategorized 
+            ? [...Array.from(categoriesInMarkers), 'uncategorized']
+            : Array.from(categoriesInMarkers);
+          setSelectedCategories(initialCategories);
         } catch (markerError) {
           console.warn('Could not load markers:', markerError);
           setMarkers([]);
@@ -185,10 +216,15 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
           }
         });
         
-        // Keep only selected categories that are still available
-        setSelectedCategories(prev => 
-          prev.filter(categoryId => newAvailableCategories.has(categoryId))
-        );
+        const hasUncategorized = markersData.some(marker => !marker.categoryId);
+        
+        // Keep only selected categories that are still available, plus uncategorized if it exists and was selected
+        setSelectedCategories(prev => {
+          const validCategories = prev.filter(categoryId => 
+            categoryId === 'uncategorized' ? hasUncategorized : newAvailableCategories.has(categoryId)
+          );
+          return validCategories;
+        });
       } catch (error) {
         console.warn('Failed to refresh markers:', error);
       }
@@ -274,10 +310,15 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
         }
       });
       
-      // Keep only selected categories that are still available
-      setSelectedCategories(prev => 
-        prev.filter(categoryId => newAvailableCategories.has(categoryId))
-      );
+      const hasUncategorized = markersData.some(marker => !marker.categoryId);
+      
+      // Keep only selected categories that are still available, plus uncategorized if it exists and was selected
+      setSelectedCategories(prev => {
+        const validCategories = prev.filter(categoryId => 
+          categoryId === 'uncategorized' ? hasUncategorized : newAvailableCategories.has(categoryId)
+        );
+        return validCategories;
+      });
     } catch (error) {
       console.error('Failed to refresh markers:', error);
       alert('Failed to refresh markers. Please try again.');
@@ -469,6 +510,7 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
                     selectedCategories={selectedCategories}
                     onCategoriesChange={handleCategoryFilterChange}
                     availableCategories={availableCategories}
+                    hasUncategorizedMarkers={hasUncategorizedMarkers}
                   />
                 </div>
               )}
@@ -495,24 +537,40 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
                   <div>
                     <p className="text-xs text-gray-600">
                       {filteredMarkers.length} of {markers.length} marker{markers.length !== 1 ? 's' : ''}
-                      {selectedCategories.length > 0 && selectedCategories.length < availableCategories.length && (
-                        <span className="text-blue-600 ml-1">(filtered)</span>
-                      )}
+                      {(() => {
+                        const totalAvailableOptions = hasUncategorizedMarkers ? availableCategories.length + 1 : availableCategories.length;
+                        const isFiltered = selectedCategories.length > 0 && selectedCategories.length < totalAvailableOptions;
+                        return isFiltered ? <span className="text-blue-600 ml-1">(filtered)</span> : null;
+                      })()}
                     </p>
-                    {selectedCategories.length > 0 && selectedCategories.length < availableCategories.length && (
-                      <p className="text-xs text-blue-600 mt-1">
-                        Showing {selectedCategories.length} of {availableCategories.length} categories
-                      </p>
-                    )}
+                    {(() => {
+                      const totalAvailableOptions = hasUncategorizedMarkers ? availableCategories.length + 1 : availableCategories.length;
+                      const isFiltered = selectedCategories.length > 0 && selectedCategories.length < totalAvailableOptions;
+                      if (isFiltered) {
+                        const uncategorizedCount = selectedCategories.includes('uncategorized') ? 1 : 0;
+                        const categoryCount = selectedCategories.filter(cat => cat !== 'uncategorized').length;
+                        return (
+                          <p className="text-xs text-blue-600 mt-1">
+                            Showing {categoryCount} of {availableCategories.length} categories
+                            {hasUncategorizedMarkers && uncategorizedCount > 0 && ' + uncategorized'}
+                          </p>
+                        );
+                      }
+                      return null;
+                    })()}
                   </div>
-                  {selectedCategories.length > 0 && selectedCategories.length < availableCategories.length && (
-                    <button
-                      onClick={() => setSelectedCategories([])}
-                      className="text-xs text-blue-600 hover:text-blue-800 underline"
-                    >
-                      Clear filter
-                    </button>
-                  )}
+                  {(() => {
+                    const totalAvailableOptions = hasUncategorizedMarkers ? availableCategories.length + 1 : availableCategories.length;
+                    const isFiltered = selectedCategories.length > 0 && selectedCategories.length < totalAvailableOptions;
+                    return isFiltered ? (
+                      <button
+                        onClick={() => setSelectedCategories([])}
+                        className="text-xs text-blue-600 hover:text-blue-800 underline"
+                      >
+                        Clear filter
+                      </button>
+                    ) : null;
+                  })()}
                 </div>
               </div>
               <MarkerList

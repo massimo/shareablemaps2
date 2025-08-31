@@ -8,12 +8,14 @@ interface CategoryFilterProps {
   selectedCategories: string[];
   onCategoriesChange: (categories: string[]) => void;
   availableCategories: string[]; // Categories that actually exist in the current markers
+  hasUncategorizedMarkers: boolean; // Whether there are markers without categories
 }
 
 export default function CategoryFilter({
   selectedCategories,
   onCategoriesChange,
   availableCategories,
+  hasUncategorizedMarkers,
 }: CategoryFilterProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -35,6 +37,13 @@ export default function CategoryFilter({
     availableCategories.includes(category.id)
   );
 
+  // Add uncategorized option if there are markers without categories
+  const allFilterOptions = hasUncategorizedMarkers 
+    ? [...filteredCategories, { id: 'uncategorized', name: 'Uncategorized', icon: '📌', description: 'Markers without a category' }]
+    : filteredCategories;
+
+  const totalAvailableOptions = hasUncategorizedMarkers ? availableCategories.length + 1 : availableCategories.length;
+
   const handleCategoryToggle = (categoryId: string) => {
     if (selectedCategories.includes(categoryId)) {
       onCategoriesChange(selectedCategories.filter(id => id !== categoryId));
@@ -44,14 +53,20 @@ export default function CategoryFilter({
   };
 
   const handleSelectAll = () => {
-    onCategoriesChange(availableCategories);
+    // Include all available categories and uncategorized if it exists
+    const allCategories = hasUncategorizedMarkers 
+      ? [...availableCategories, 'uncategorized']
+      : availableCategories;
+    onCategoriesChange(allCategories);
   };
 
   const handleClearAll = () => {
     onCategoriesChange([]);
   };
 
-  const isAllSelected = selectedCategories.length === availableCategories.length;
+  const isAllSelected = hasUncategorizedMarkers 
+    ? availableCategories.every(cat => selectedCategories.includes(cat)) && selectedCategories.includes('uncategorized')
+    : availableCategories.every(cat => selectedCategories.includes(cat)) && selectedCategories.length === availableCategories.length;
   const isNoneSelected = selectedCategories.length === 0;
 
   return (
