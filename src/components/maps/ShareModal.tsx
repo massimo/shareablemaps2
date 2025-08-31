@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   XMarkIcon,
   ShareIcon,
@@ -16,6 +16,7 @@ interface ShareModalProps {
   mapId: string;
   mapTitle: string;
   onSave: (shareSettings: ShareSettings) => void;
+  initialShareSettings?: ShareSettings; // Add initial settings prop
 }
 
 export interface ShareSettings {
@@ -24,11 +25,30 @@ export interface ShareSettings {
   isEnabled: boolean;
 }
 
-export default function ShareModal({ isOpen, onClose, mapId, mapTitle, onSave }: ShareModalProps) {
-  const [shareType, setShareType] = useState<'private' | 'public' | 'password'>('private');
-  const [password, setPassword] = useState('');
+export default function ShareModal({ 
+  isOpen, 
+  onClose, 
+  mapId, 
+  mapTitle, 
+  onSave, 
+  initialShareSettings 
+}: ShareModalProps) {
+  const [shareType, setShareType] = useState<'private' | 'public' | 'password'>(
+    initialShareSettings?.shareType || 'private'
+  );
+  const [password, setPassword] = useState(
+    initialShareSettings?.password || ''
+  );
   const [showPassword, setShowPassword] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Update state when initial settings change (when modal opens with data)
+  useEffect(() => {
+    if (isOpen && initialShareSettings) {
+      setShareType(initialShareSettings.shareType);
+      setPassword(initialShareSettings.password || '');
+    }
+  }, [isOpen, initialShareSettings]);
 
   if (!isOpen) return null;
 

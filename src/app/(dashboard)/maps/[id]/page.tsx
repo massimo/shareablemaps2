@@ -46,6 +46,7 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
   const [selectedMarker, setSelectedMarker] = useState<MarkerDoc | null>(null);
   const [showDirectionsModal, setShowDirectionsModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [currentShareSettings, setCurrentShareSettings] = useState<ShareSettings | undefined>();
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<'expanded' | 'compact'>('expanded');
   const [showMarkerForm, setShowMarkerForm] = useState(false);
@@ -128,6 +129,12 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
         if (mapData) {
           // Set map title
           setMapTitle(mapData.title);
+          
+          // Load current share settings
+          setCurrentShareSettings(mapData.shareSettings || {
+            shareType: 'private',
+            isEnabled: false
+          });
           
           // Set map center and zoom based on main location
           if (mapData.mainLocation) {
@@ -495,6 +502,10 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
     try {
       await SharedMapService.updateShareSettings(id, shareSettings);
       console.log('Share settings saved:', shareSettings);
+      
+      // Update local state to preserve the settings
+      setCurrentShareSettings(shareSettings);
+      
       // TODO: Show success notification
     } catch (error) {
       console.error('Error saving share settings:', error);
@@ -755,6 +766,7 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
         mapId={id}
         mapTitle={mapTitle}
         onSave={handleShareSave}
+        initialShareSettings={currentShareSettings}
       />
     </div>
   );

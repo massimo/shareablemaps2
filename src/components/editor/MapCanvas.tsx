@@ -222,28 +222,7 @@ export default function MapCanvas({
                   }
                 }
               }}
-            >
-              <Popup>
-                <div className="min-w-0">
-                  <h3 className="font-semibold text-sm">{marker.title}</h3>
-                  {marker.address && (
-                    <p className="text-xs text-gray-600 mt-1">{marker.address}</p>
-                  )}
-                  {marker.description && (
-                    <p className="text-xs text-gray-800 mt-2">{marker.description}</p>
-                  )}
-                  {marker.icon?.color && (
-                    <div className="mt-2 flex items-center">
-                      <div 
-                        className="w-3 h-3 rounded-full border border-gray-300 mr-2"
-                        style={{ backgroundColor: marker.icon.color }}
-                      />
-                      <span className="text-xs text-gray-500">Custom Color</span>
-                    </div>
-                  )}
-                </div>
-              </Popup>
-            </Marker>
+            />
           );
         })}
         
