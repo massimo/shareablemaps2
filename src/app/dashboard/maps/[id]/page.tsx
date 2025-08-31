@@ -550,20 +550,6 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
           {/* Left Panel - Marker List */}
           <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
             <div className="p-4 border-b border-gray-200">
-              <div className="flex items-center justify-between mb-4">
-                <h1 className="text-xl font-semibold text-gray-900">{mapTitle}</h1>
-                <button
-                  onClick={handleRefreshMarkers}
-                  className="text-xs text-gray-500 hover:text-gray-700 underline flex items-center"
-                  title="Refresh markers from database"
-                >
-                  <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                  Refresh
-                </button>
-              </div>
-              
               {/* Location Search */}
               <LocationSearch
                 onLocationSelect={handleLocationSelect}
