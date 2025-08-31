@@ -73,16 +73,11 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
           
           console.log('Map data loaded successfully:', mapData);
           
-          // Try to load markers for this map (gracefully handle if Firebase isn't configured)
-          try {
-            const markersData = await MarkerService.getMarkersByMapId(id);
-            setMarkers(markersData);
-            console.log('Markers loaded:', markersData.length);
-          } catch (markerError) {
-            console.warn('Could not load markers (Firebase may not be configured):', markerError);
-            // Continue without markers - they'll be stored locally until Firebase is set up
-            setMarkers([]);
-          }
+          // Load markers for this map
+          console.log('Loading markers for map:', id);
+          const markersData = await MarkerService.getMarkersByMapId(id);
+          setMarkers(markersData);
+          console.log('Markers loaded successfully:', markersData.length, 'markers');
         } else {
           // Map not found
           console.error('Map not found:', id);
@@ -97,6 +92,17 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
         setMapTitle(`Map ${id}`);
         setMapCenter([51.505, -0.09]);
         setMapZoom(16);
+        
+        // Try to load markers even if map loading failed
+        try {
+          console.log('Attempting to load markers despite map error...');
+          const markersData = await MarkerService.getMarkersByMapId(id);
+          setMarkers(markersData);
+          console.log('Markers loaded despite map error:', markersData.length, 'markers');
+        } catch (markerError) {
+          console.warn('Could not load markers:', markerError);
+          setMarkers([]);
+        }
       } finally {
         setIsLoadingMap(false);
       }
@@ -104,6 +110,28 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
 
     loadMapData();
   }, [id, setMapCenter, setMapZoom, setMapTitle]);
+
+  // Separate effect to refresh markers periodically
+  useEffect(() => {
+    const refreshMarkers = async () => {
+      if (!id) return;
+      
+      try {
+        console.log('Refreshing markers for map:', id);
+        const markersData = await MarkerService.getMarkersByMapId(id);
+        setMarkers(markersData);
+        console.log('Markers refreshed:', markersData.length, 'markers found');
+      } catch (error) {
+        console.warn('Failed to refresh markers:', error);
+      }
+    };
+
+    // Refresh markers when component mounts and every 30 seconds
+    refreshMarkers();
+    const interval = setInterval(refreshMarkers, 30000);
+
+    return () => clearInterval(interval);
+  }, [id]);
 
   const handleMapClick = useCallback((e: any) => {
     const { lat, lng } = e.latlng;
@@ -135,6 +163,18 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
   const handleMarkerTypeChange = useCallback((markerType: 'pin' | 'circle') => {
     setPendingMarkerType(markerType);
   }, []);
+
+  const handleRefreshMarkers = useCallback(async () => {
+    try {
+      console.log('Manually refreshing markers for map:', id);
+      const markersData = await MarkerService.getMarkersByMapId(id);
+      setMarkers(markersData);
+      console.log('Manual refresh complete:', markersData.length, 'markers loaded');
+    } catch (error) {
+      console.error('Failed to refresh markers:', error);
+      alert('Failed to refresh markers. Please try again.');
+    }
+  }, [id]);
 
     const handleMarkerSave = useCallback(async (data: any) => {
     try {
@@ -268,7 +308,19 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
           {/* Left Panel - Marker List */}
           <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
             <div className="p-4 border-b border-gray-200">
-              <h1 className="text-xl font-semibold text-gray-900 mb-4">{mapTitle}</h1>
+              <div className="flex items-center justify-between mb-4">
+                <h1 className="text-xl font-semibold text-gray-900">{mapTitle}</h1>
+                <button
+                  onClick={handleRefreshMarkers}
+                  className="text-xs text-gray-500 hover:text-gray-700 underline flex items-center"
+                  title="Refresh markers from database"
+                >
+                  <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Refresh
+                </button>
+              </div>
               
               {/* Location Search */}
               <LocationSearch
@@ -316,6 +368,11 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
 
             {/* Marker List */}
             <div className="flex-1 overflow-auto">
+              <div className="p-3 bg-gray-50 border-b border-gray-200">
+                <p className="text-xs text-gray-600">
+                  {markers.length} marker{markers.length !== 1 ? 's' : ''} on this map
+                </p>
+              </div>
               <MarkerList
                 markers={markers}
                 onMarkerEdit={handleMarkerEdit}

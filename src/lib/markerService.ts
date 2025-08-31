@@ -89,20 +89,38 @@ export class MarkerService {
    */
   static async getMarkersByMapId(mapId: string): Promise<MarkerDoc[]> {
     try {
+      console.log('MarkerService.getMarkersByMapId - Fetching markers for map:', mapId);
+      
+      // Simple query without orderBy to avoid requiring an index
       const markersQuery = query(
         collection(db, this.COLLECTION),
-        where('mapId', '==', mapId),
-        orderBy('createdAt', 'desc')
+        where('mapId', '==', mapId)
       );
 
       const querySnapshot = await getDocs(markersQuery);
-      return querySnapshot.docs.map(doc => ({
+      const markers = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       } as MarkerDoc));
+
+      // Sort client-side by createdAt if timestamps exist
+      markers.sort((a, b) => {
+        if (a.createdAt && b.createdAt) {
+          return b.createdAt.toMillis() - a.createdAt.toMillis();
+        }
+        return 0;
+      });
+
+      console.log('MarkerService.getMarkersByMapId - Found', markers.length, 'markers');
+      return markers;
     } catch (error) {
-      console.error('Error fetching markers:', error);
-      throw new Error('Failed to fetch markers');
+      console.error('MarkerService.getMarkersByMapId - Error fetching markers:', error);
+      console.error('MarkerService.getMarkersByMapId - Error details:', {
+        code: (error as any).code,
+        message: (error as any).message,
+        mapId
+      });
+      throw new Error(`Failed to fetch markers: ${(error as any).message}`);
     }
   }
 
@@ -111,21 +129,34 @@ export class MarkerService {
    */
   static async getMarkersByCategory(mapId: string, categoryId: string): Promise<MarkerDoc[]> {
     try {
+      console.log('MarkerService.getMarkersByCategory - Fetching markers for map:', mapId, 'category:', categoryId);
+      
+      // Simple query without orderBy to avoid requiring an index
       const markersQuery = query(
         collection(db, this.COLLECTION),
         where('mapId', '==', mapId),
-        where('categoryId', '==', categoryId),
-        orderBy('createdAt', 'desc')
+        where('categoryId', '==', categoryId)
       );
 
       const querySnapshot = await getDocs(markersQuery);
-      return querySnapshot.docs.map(doc => ({
+      const markers = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       } as MarkerDoc));
+
+      // Sort client-side by createdAt if timestamps exist
+      markers.sort((a, b) => {
+        if (a.createdAt && b.createdAt) {
+          return b.createdAt.toMillis() - a.createdAt.toMillis();
+        }
+        return 0;
+      });
+
+      console.log('MarkerService.getMarkersByCategory - Found', markers.length, 'markers in category');
+      return markers;
     } catch (error) {
-      console.error('Error fetching markers by category:', error);
-      throw new Error('Failed to fetch markers by category');
+      console.error('MarkerService.getMarkersByCategory - Error fetching markers by category:', error);
+      throw new Error(`Failed to fetch markers by category: ${(error as any).message}`);
     }
   }
 }
