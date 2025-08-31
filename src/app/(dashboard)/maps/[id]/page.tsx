@@ -12,11 +12,12 @@ import AddMarkerConfirmModal from '@/components/editor/AddMarkerConfirmModal';
 import CategoryFilter from '@/components/editor/CategoryFilter';
 import MarkerCard from '@/components/maps/MarkerCard';
 import DirectionsModal from '@/components/maps/DirectionsModal';
+import ShareModal, { ShareSettings } from '@/components/maps/ShareModal';
 import { useMapStore } from '@/lib/store';
 import { getMapById } from '@/lib/mapService';
 import { MarkerService } from '@/lib/markerService';
 import { auth } from '@/lib/firebase';
-import { MapIcon } from '@heroicons/react/24/outline';
+import { MapIcon, ShareIcon } from '@heroicons/react/24/outline';
 import { Bars3Icon, Squares2X2Icon } from '@heroicons/react/24/outline';
 
 // Dynamically import MapCanvas to avoid SSR issues with Leaflet
@@ -43,6 +44,7 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
   const [selectedMarkerId, setSelectedMarkerId] = useState<string>();
   const [selectedMarker, setSelectedMarker] = useState<MarkerDoc | null>(null);
   const [showDirectionsModal, setShowDirectionsModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<'expanded' | 'compact'>('expanded');
   const [showMarkerForm, setShowMarkerForm] = useState(false);
@@ -480,6 +482,20 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
     setShowDirectionsModal(false);
   }, []);
 
+  const handleShare = useCallback(() => {
+    setShowShareModal(true);
+  }, []);
+
+  const handleShareModalClose = useCallback(() => {
+    setShowShareModal(false);
+  }, []);
+
+  const handleShareSave = useCallback(async (shareSettings: ShareSettings) => {
+    // TODO: Implement saving share settings to database
+    console.log('Saving share settings:', shareSettings);
+    // For now, just log the settings. We'll implement the database storage next.
+  }, []);
+
   return (
     <div className="h-full flex">
       {isLoadingMap ? (
@@ -692,6 +708,17 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
                 />
               </div>
             )}
+
+            {/* Sticky Share Button */}
+            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-[1000]">
+              <button
+                onClick={handleShare}
+                className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-full shadow-lg hover:bg-blue-700 transition-colors"
+              >
+                <ShareIcon className="h-4 w-4" />
+                <span className="text-sm font-medium">Share Map</span>
+              </button>
+            </div>
           </div>
         </>
       )}
@@ -714,6 +741,15 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
           title={selectedMarker.title}
         />
       )}
+
+      {/* Share Modal */}
+      <ShareModal
+        isOpen={showShareModal}
+        onClose={handleShareModalClose}
+        mapId={id}
+        mapTitle={mapTitle}
+        onSave={handleShareSave}
+      />
     </div>
   );
 }
