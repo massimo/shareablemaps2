@@ -9,6 +9,7 @@ import MarkerList from '@/components/editor/MarkerList';
 import MarkerForm from '@/components/editor/MarkerForm';
 import LocationSearch from '@/components/editor/LocationSearch';
 import AddMarkerConfirmModal from '@/components/editor/AddMarkerConfirmModal';
+import CategoryFilter from '@/components/editor/CategoryFilter';
 import { useMapStore } from '@/lib/store';
 import { getMapById } from '@/lib/mapService';
 import { MarkerService } from '@/lib/markerService';
@@ -37,6 +38,7 @@ interface MapEditorPageProps {
 export default function MapEditorPage({ params }: MapEditorPageProps) {
   const [markers, setMarkers] = useState<MarkerDoc[]>([]);
   const [selectedMarkerId, setSelectedMarkerId] = useState<string>();
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [showMarkerForm, setShowMarkerForm] = useState(false);
   const [showAddMarkerConfirm, setShowAddMarkerConfirm] = useState(false);
   const [editingMarker, setEditingMarker] = useState<MarkerDoc | undefined>();
@@ -52,6 +54,26 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
   
   // Unwrap params using React.use()
   const { id } = React.use(params);
+
+  // Compute filtered markers and available categories
+  const availableCategories = React.useMemo(() => {
+    const categories = new Set<string>();
+    markers.forEach(marker => {
+      if (marker.categoryId) {
+        categories.add(marker.categoryId);
+      }
+    });
+    return Array.from(categories);
+  }, [markers]);
+
+  const filteredMarkers = React.useMemo(() => {
+    if (selectedCategories.length === 0) {
+      return markers; // Show all markers if no filter is applied
+    }
+    return markers.filter(marker => 
+      marker.categoryId && selectedCategories.includes(marker.categoryId)
+    );
+  }, [markers, selectedCategories]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -92,6 +114,15 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
           const markersData = await MarkerService.getMarkersByMapId(id);
           setMarkers(markersData);
           console.log('Markers loaded successfully:', markersData.length, 'markers');
+          
+          // Initialize category filter to show all available categories
+          const categoriesInMarkers = new Set<string>();
+          markersData.forEach(marker => {
+            if (marker.categoryId) {
+              categoriesInMarkers.add(marker.categoryId);
+            }
+          });
+          setSelectedCategories(Array.from(categoriesInMarkers));
         } else {
           // Map not found
           console.error('Map not found:', id);
@@ -113,9 +144,19 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
           const markersData = await MarkerService.getMarkersByMapId(id);
           setMarkers(markersData);
           console.log('Markers loaded despite map error:', markersData.length, 'markers');
+          
+          // Initialize category filter for error case too
+          const categoriesInMarkers = new Set<string>();
+          markersData.forEach(marker => {
+            if (marker.categoryId) {
+              categoriesInMarkers.add(marker.categoryId);
+            }
+          });
+          setSelectedCategories(Array.from(categoriesInMarkers));
         } catch (markerError) {
           console.warn('Could not load markers:', markerError);
           setMarkers([]);
+          setSelectedCategories([]);
         }
       } finally {
         setIsLoadingMap(false);
@@ -135,6 +176,19 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
         const markersData = await MarkerService.getMarkersByMapId(id);
         setMarkers(markersData);
         console.log('Markers refreshed:', markersData.length, 'markers found');
+        
+        // Update available categories but preserve current filter selection if still valid
+        const newAvailableCategories = new Set<string>();
+        markersData.forEach(marker => {
+          if (marker.categoryId) {
+            newAvailableCategories.add(marker.categoryId);
+          }
+        });
+        
+        // Keep only selected categories that are still available
+        setSelectedCategories(prev => 
+          prev.filter(categoryId => newAvailableCategories.has(categoryId))
+        );
       } catch (error) {
         console.warn('Failed to refresh markers:', error);
       }
@@ -211,6 +265,19 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
       const markersData = await MarkerService.getMarkersByMapId(id);
       setMarkers(markersData);
       console.log('Manual refresh complete:', markersData.length, 'markers loaded');
+      
+      // Update available categories but preserve current filter selection if still valid
+      const newAvailableCategories = new Set<string>();
+      markersData.forEach(marker => {
+        if (marker.categoryId) {
+          newAvailableCategories.add(marker.categoryId);
+        }
+      });
+      
+      // Keep only selected categories that are still available
+      setSelectedCategories(prev => 
+        prev.filter(categoryId => newAvailableCategories.has(categoryId))
+      );
     } catch (error) {
       console.error('Failed to refresh markers:', error);
       alert('Failed to refresh markers. Please try again.');
@@ -328,6 +395,11 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
     console.log('Map instance ready and stored in ref');
   }, []);
 
+  const handleCategoryFilterChange = useCallback((categories: string[]) => {
+    setSelectedCategories(categories);
+    console.log('Category filter changed:', categories);
+  }, []);
+
   return (
     <div className="h-full flex">
       {isLoadingMap ? (
@@ -390,6 +462,17 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
                 }
               />
               
+              {/* Category Filter */}
+              {availableCategories.length > 0 && (
+                <div className="mt-3">
+                  <CategoryFilter
+                    selectedCategories={selectedCategories}
+                    onCategoriesChange={handleCategoryFilterChange}
+                    availableCategories={availableCategories}
+                  />
+                </div>
+              )}
+              
               {/* Clear pending marker button - only show if there's a pending position */}
               {pendingPosition && !showMarkerForm && !showAddMarkerConfirm && (
                 <button
@@ -408,12 +491,32 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
             {/* Marker List */}
             <div className="flex-1 overflow-auto">
               <div className="p-3 bg-gray-50 border-b border-gray-200">
-                <p className="text-xs text-gray-600">
-                  {markers.length} marker{markers.length !== 1 ? 's' : ''} on this map
-                </p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-gray-600">
+                      {filteredMarkers.length} of {markers.length} marker{markers.length !== 1 ? 's' : ''}
+                      {selectedCategories.length > 0 && selectedCategories.length < availableCategories.length && (
+                        <span className="text-blue-600 ml-1">(filtered)</span>
+                      )}
+                    </p>
+                    {selectedCategories.length > 0 && selectedCategories.length < availableCategories.length && (
+                      <p className="text-xs text-blue-600 mt-1">
+                        Showing {selectedCategories.length} of {availableCategories.length} categories
+                      </p>
+                    )}
+                  </div>
+                  {selectedCategories.length > 0 && selectedCategories.length < availableCategories.length && (
+                    <button
+                      onClick={() => setSelectedCategories([])}
+                      className="text-xs text-blue-600 hover:text-blue-800 underline"
+                    >
+                      Clear filter
+                    </button>
+                  )}
+                </div>
               </div>
               <MarkerList
-                markers={markers}
+                markers={filteredMarkers}
                 onMarkerEdit={handleMarkerEdit}
                 onMarkerDelete={handleMarkerDelete}
                 onMarkerSelect={handleMarkerSelect}
@@ -444,7 +547,7 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
               onMapClick={handleMapClick}
               onMapReady={handleMapReady}
               className="h-full"
-              markers={markers}
+              markers={markers} // Show all markers on map, regardless of filter
               pendingPosition={pendingPosition}
               pendingColor={pendingColor}
               pendingMarkerType={pendingMarkerType}
