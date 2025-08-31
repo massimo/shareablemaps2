@@ -2,12 +2,12 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import dynamic from 'next/dynamic';
-import { useSearchParams } from 'next/navigation';
 import { MarkerDoc } from '@/types';
 import MarkerList from '@/components/editor/MarkerList';
 import MarkerForm from '@/components/editor/MarkerForm';
 import LocationSearch from '@/components/editor/LocationSearch';
 import { useMapStore } from '@/lib/store';
+import { getMapById } from '@/lib/mapService';
 import { PlusIcon, MapIcon } from '@heroicons/react/24/outline';
 
 // Dynamically import MapCanvas to avoid SSR issues with Leaflet
@@ -30,46 +30,61 @@ interface MapEditorPageProps {
 }
 
 export default function MapEditorPage({ params }: MapEditorPageProps) {
-  const searchParams = useSearchParams();
   const [markers, setMarkers] = useState<MarkerDoc[]>([]);
   const [selectedMarkerId, setSelectedMarkerId] = useState<string>();
   const [showMarkerForm, setShowMarkerForm] = useState(false);
   const [editingMarker, setEditingMarker] = useState<MarkerDoc | undefined>();
   const [pendingPosition, setPendingPosition] = useState<{ lat: number; lng: number } | undefined>();
+  const [isLoadingMap, setIsLoadingMap] = useState(true);
+  const [mapError, setMapError] = useState<string | null>(null);
 
   const { setMapCenter, setMapZoom, setMapTitle, mapTitle } = useMapStore();
 
-  // Initialize map with URL parameters
+  // Load map data from database
   useEffect(() => {
-    // Get parameters from URL
-    const lat = searchParams.get('lat');
-    const lng = searchParams.get('lng');
-    const zoom = searchParams.get('zoom');
-    const city = searchParams.get('city');
-    const title = searchParams.get('title');
-    
-    // Set map title if provided, otherwise use default
-    const displayTitle = title ? decodeURIComponent(title) : `Map ${params.id}`;
-    setMapTitle(displayTitle);
-    
-    // Set map center and zoom if coordinates are provided
-    if (lat && lng) {
-      const latitude = parseFloat(lat);
-      const longitude = parseFloat(lng);
-      
-      if (!isNaN(latitude) && !isNaN(longitude)) {
-        setMapCenter([latitude, longitude]);
+    const loadMapData = async () => {
+      try {
+        setIsLoadingMap(true);
+        setMapError(null);
+        console.log('Loading map data for ID:', params.id);
         
-        // Set zoom level (default to 12 if not provided or invalid)
-        const zoomLevel = zoom ? parseInt(zoom, 10) : 12;
-        if (!isNaN(zoomLevel) && zoomLevel >= 1 && zoomLevel <= 18) {
-          setMapZoom(zoomLevel);
+        const mapData = await getMapById(params.id);
+        if (mapData) {
+          // Set map title
+          setMapTitle(mapData.title);
+          
+          // Set map center and zoom based on main location
+          if (mapData.mainLocation) {
+            setMapCenter([mapData.mainLocation.lat, mapData.mainLocation.lng]);
+            setMapZoom(16);
+          } else {
+            // No main location, use default
+            setMapCenter([51.505, -0.09]); // London default
+            setMapZoom(16);
+          }
+          
+          console.log('Map data loaded successfully:', mapData);
         } else {
-          setMapZoom(12);
+          // Map not found
+          console.error('Map not found:', params.id);
+          setMapError('Map not found');
+          setMapTitle('Map Not Found');
+          setMapCenter([51.505, -0.09]);
+          setMapZoom(16);
         }
+      } catch (error) {
+        console.error('Error loading map data:', error);
+        setMapError('Failed to load map');
+        setMapTitle(`Map ${params.id}`);
+        setMapCenter([51.505, -0.09]);
+        setMapZoom(16);
+      } finally {
+        setIsLoadingMap(false);
       }
-    }
-  }, [searchParams, params.id, setMapCenter, setMapZoom, setMapTitle]);
+    };
+
+    loadMapData();
+  }, [params.id, setMapCenter, setMapZoom, setMapTitle]);
 
   const handleMapClick = useCallback((e: any) => {
     const { lat, lng } = e.latlng;
@@ -129,64 +144,98 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
 
   return (
     <div className="h-full flex">
-      {/* Left Panel - Marker List */}
-      <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
-        <div className="p-4 border-b border-gray-200">
-          <h1 className="text-xl font-semibold text-gray-900 mb-4">{mapTitle}</h1>
-          
-          {/* Location Search */}
-          <LocationSearch
-            onLocationSelect={handleLocationSelect}
-            placeholder="Search to add marker..."
-          />
-          
-          {/* Add Marker Button */}
-          <button
-            onClick={() => {
-              setPendingPosition({ lat: 51.505, lng: -0.09 }); // Default position
-              setEditingMarker(undefined);
-              setShowMarkerForm(true);
-            }}
-            className="mt-3 w-full inline-flex items-center justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
-          >
-            <PlusIcon className="h-4 w-4 mr-2" />
-            Add Marker
-          </button>
+      {isLoadingMap ? (
+        // Loading State
+        <div className="flex-1 flex items-center justify-center bg-gray-50">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-sm text-gray-500">Loading map...</p>
+          </div>
         </div>
-
-        {/* Marker List */}
-        <div className="flex-1 overflow-auto">
-          <MarkerList
-            markers={markers}
-            onMarkerEdit={handleMarkerEdit}
-            onMarkerDelete={handleMarkerDelete}
-            onMarkerSelect={handleMarkerSelect}
-            selectedMarkerId={selectedMarkerId}
-          />
+      ) : mapError ? (
+        // Error State
+        <div className="flex-1 flex items-center justify-center bg-gray-50">
+          <div className="text-center">
+            <div className="text-red-600 mb-4">
+              <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-medium text-gray-900">Error loading map</h3>
+            <p className="mt-1 text-sm text-gray-500">{mapError}</p>
+            <div className="mt-4">
+              <button
+                onClick={() => window.location.reload()}
+                className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+              >
+                Try Again
+              </button>
+            </div>
+          </div>
         </div>
+      ) : (
+        // Map Editor Content
+        <>
+          {/* Left Panel - Marker List */}
+          <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
+            <div className="p-4 border-b border-gray-200">
+              <h1 className="text-xl font-semibold text-gray-900 mb-4">{mapTitle}</h1>
+              
+              {/* Location Search */}
+              <LocationSearch
+                onLocationSelect={handleLocationSelect}
+                placeholder="Search to add marker..."
+              />
+              
+              {/* Add Marker Button */}
+              <button
+                onClick={() => {
+                  setPendingPosition({ lat: 51.505, lng: -0.09 }); // Default position
+                  setEditingMarker(undefined);
+                  setShowMarkerForm(true);
+                }}
+                className="mt-3 w-full inline-flex items-center justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+              >
+                <PlusIcon className="h-4 w-4 mr-2" />
+                Add Marker
+              </button>
+            </div>
 
-        {/* Marker Form */}
-        {showMarkerForm && (
-          <MarkerForm
-            marker={editingMarker}
-            onSave={handleMarkerSave}
-            onCancel={() => {
-              setShowMarkerForm(false);
-              setEditingMarker(undefined);
-              setPendingPosition(undefined);
-            }}
-            defaultPosition={pendingPosition}
-          />
-        )}
-      </div>
+            {/* Marker List */}
+            <div className="flex-1 overflow-auto">
+              <MarkerList
+                markers={markers}
+                onMarkerEdit={handleMarkerEdit}
+                onMarkerDelete={handleMarkerDelete}
+                onMarkerSelect={handleMarkerSelect}
+                selectedMarkerId={selectedMarkerId}
+              />
+            </div>
 
-      {/* Right Panel - Map */}
-      <div className="flex-1">
-        <MapCanvas
-          onMapClick={handleMapClick}
-          className="h-full"
-        />
-      </div>
+            {/* Marker Form */}
+            {showMarkerForm && (
+              <MarkerForm
+                marker={editingMarker}
+                onSave={handleMarkerSave}
+                onCancel={() => {
+                  setShowMarkerForm(false);
+                  setEditingMarker(undefined);
+                  setPendingPosition(undefined);
+                }}
+                defaultPosition={pendingPosition}
+              />
+            )}
+          </div>
+
+          {/* Right Panel - Map */}
+          <div className="flex-1">
+            <MapCanvas
+              onMapClick={handleMapClick}
+              className="h-full"
+            />
+          </div>
+        </>
+      )}
     </div>
   );
 }

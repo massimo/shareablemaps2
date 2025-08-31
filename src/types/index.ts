@@ -30,6 +30,12 @@ export interface MapDoc {
   title: string;
   description?: string;
   coverUrl?: string;
+  mainLocation?: {
+    lat: number;
+    lng: number;
+    address: string;
+    city?: string;
+  };
   createdAt: Timestamp;
   updatedAt: Timestamp;
   isPublicLinkEnabled: boolean;

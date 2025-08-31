@@ -39,7 +39,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   
   // Initial map state - default to London
   mapCenter: [51.505, -0.09] as LatLngExpression,
-  mapZoom: 10,
+  mapZoom: 16,
   mapTitle: 'Untitled Map',
 
   setCurrentMap: (map) => set({ currentMap: map }),

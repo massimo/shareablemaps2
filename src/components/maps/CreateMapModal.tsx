@@ -6,6 +6,8 @@ import { XMarkIcon } from '@heroicons/react/24/outline';
 import { useForm } from 'react-hook-form';
 import LocationSearch from '@/components/editor/LocationSearch';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/components/auth/AuthProvider';
+import { createMap } from '@/lib/mapService';
 
 interface CreateMapModalProps {
   isOpen: boolean;
@@ -25,6 +27,7 @@ interface CreateMapFormData {
 
 export default function CreateMapModal({ isOpen, onClose }: CreateMapModalProps) {
   const router = useRouter();
+  const { user } = useAuth();
   const [selectedLocation, setSelectedLocation] = useState<{
     lat: number;
     lng: number;
@@ -51,28 +54,35 @@ export default function CreateMapModal({ isOpen, onClose }: CreateMapModalProps)
         return;
       }
 
-      // TODO: Create map in Firebase
-      const mapId = `map-${Date.now()}`; // Temporary ID generation
-      
-      console.log('Creating map:', {
-        title: data.title,
-        description: data.description,
+      if (!user) {
+        console.error('User not authenticated');
+        return;
+      }
+
+      // Prepare map data
+      const mapData = {
+        title: data.title.trim(),
+        description: data.description?.trim() || undefined,
         tags: data.tags ? data.tags.split(',').map(tag => tag.trim()).filter(Boolean) : [],
-        location: selectedLocation,
+        mainLocation: selectedLocation ? {
+          lat: selectedLocation.lat,
+          lng: selectedLocation.lng,
+          address: selectedLocation.address,
+          city: selectedLocation.address.split(',')[0]?.trim(), // Extract city from address
+        } : undefined,
+      };
+
+      // Create map in Firebase
+      const { id: mapId, shareId } = await createMap(user.uid, mapData);
+      
+      console.log('Map created successfully:', {
+        mapId,
+        shareId,
+        data: mapData,
       });
 
-      // Navigate to the new map editor
-      const mapUrl = `/maps/${mapId}`;
-      
-      // Pass location data via URL params for now
-      const urlParams = new URLSearchParams();
-      if (selectedLocation) {
-        urlParams.set('lat', selectedLocation.lat.toString());
-        urlParams.set('lng', selectedLocation.lng.toString());
-        urlParams.set('address', selectedLocation.address);
-      }
-      
-      router.push(`${mapUrl}?${urlParams.toString()}`);
+      // Navigate to the new map editor with just the map ID
+      router.push(`/maps/${mapId}`);
       
       // Close modal and reset form
       handleClose();
