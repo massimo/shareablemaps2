@@ -50,6 +50,7 @@ export interface MarkerIcon {
   library: 'default' | 'heroicons';
   name: string;
   color?: string;
+  markerType?: 'pin' | 'circle';
 }
 
 export interface MarkerDoc {

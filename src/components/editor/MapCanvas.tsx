@@ -18,12 +18,13 @@ L.Icon.Default.mergeOptions({
 });
 
 interface MapCanvasProps {
-  onMapReady?: (map: L.Map) => void;
-  onMapClick?: (e: L.LeafletMouseEvent) => void;
   className?: string;
-  markers?: MarkerDoc[];
+  markers: MarkerDoc[];
+  onMapClick?: (latlng: { lat: number; lng: number }) => void;
+  onMapReady?: (map: L.Map) => void;
   pendingPosition?: { lat: number; lng: number; address?: string };
   pendingColor?: string;
+  pendingMarkerType?: 'pin' | 'circle';
 }
 
 function MapController({ 
@@ -75,12 +76,13 @@ export default function MapCanvas({
   markers = [],
   pendingPosition,
   pendingColor,
+  pendingMarkerType = 'pin',
 }: MapCanvasProps) {
   const mapRef = useRef<L.Map | null>(null);
   const { mapCenter, mapZoom } = useMapStore();
 
   // Function to create colored marker icons using SVG data URLs for accurate colors
-  const createColoredIcon = React.useCallback((color?: string) => {
+  const createColoredIcon = React.useCallback((color?: string, markerType: 'pin' | 'circle' = 'pin') => {
     if (!color) {
       // Default red marker
       return new L.Icon({
@@ -94,26 +96,43 @@ export default function MapCanvas({
       });
     }
 
-    // Create SVG marker with the exact color
-    const svgIcon = `
-      <svg width="25" height="41" viewBox="0 0 25 41" xmlns="http://www.w3.org/2000/svg">
-        <path d="M12.5 0C5.596 0 0 5.596 0 12.5c0 8.125 12.5 28.5 12.5 28.5S25 20.625 25 12.5C25 5.596 19.404 0 12.5 0z" 
-              fill="${color}" 
-              stroke="#fff" 
-              stroke-width="1"/>
-        <circle cx="12.5" cy="12.5" r="4" fill="#fff"/>
-      </svg>
-    `;
+    let svgIcon: string;
+    let iconSize: [number, number];
+    let iconAnchor: [number, number];
+
+    if (markerType === 'circle') {
+      // Create simple circle marker
+      svgIcon = `
+        <svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="10" cy="10" r="8" fill="${color}" stroke="#fff" stroke-width="2"/>
+        </svg>
+      `;
+      iconSize = [20, 20];
+      iconAnchor = [10, 10];
+    } else {
+      // Create traditional pin marker
+      svgIcon = `
+        <svg width="25" height="41" viewBox="0 0 25 41" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12.5 0C5.596 0 0 5.596 0 12.5c0 8.125 12.5 28.5 12.5 28.5S25 20.625 25 12.5C25 5.596 19.404 0 12.5 0z" 
+                fill="${color}" 
+                stroke="#fff" 
+                stroke-width="1"/>
+          <circle cx="12.5" cy="12.5" r="4" fill="#fff"/>
+        </svg>
+      `;
+      iconSize = [25, 41];
+      iconAnchor = [12, 41];
+    }
     
     const svgUrl = `data:image/svg+xml;base64,${btoa(svgIcon)}`;
     
     return new L.Icon({
       iconUrl: svgUrl,
-      shadowUrl: '/leaflet/marker-shadow.png',
-      iconSize: [25, 41],
-      iconAnchor: [12, 41],
-      popupAnchor: [1, -34],
-      shadowSize: [41, 41],
+      shadowUrl: markerType === 'pin' ? '/leaflet/marker-shadow.png' : undefined,
+      iconSize,
+      iconAnchor,
+      popupAnchor: [1, markerType === 'circle' ? -10 : -34],
+      shadowSize: markerType === 'pin' ? [41, 41] : undefined,
     });
   }, []);
 
@@ -163,7 +182,7 @@ export default function MapCanvas({
           <Marker
             key={marker.id}
             position={[marker.lat, marker.lng]}
-            icon={createColoredIcon(marker.icon?.color)}
+            icon={createColoredIcon(marker.icon?.color, marker.icon?.markerType)}
           >
             <Popup>
               <div className="min-w-0">
@@ -191,9 +210,9 @@ export default function MapCanvas({
         {/* Pending Marker (when creating/editing) */}
         {pendingPosition && (
           <Marker
-            key={`pending-marker-${pendingColor}`} // Key includes color to force re-render
+            key={`pending-marker-${pendingColor}-${pendingMarkerType}`} // Key includes color and type to force re-render
             position={[pendingPosition.lat, pendingPosition.lng]}
-            icon={createColoredIcon(pendingColor)}
+            icon={createColoredIcon(pendingColor, pendingMarkerType)}
           >
             <Popup>
               <div className="min-w-0">
@@ -216,7 +235,10 @@ export default function MapCanvas({
           </Marker>
         )}
         
-        <MapController onMapClick={onMapClick} onMapReady={onMapReady} />
+        <MapController 
+          onMapClick={onMapClick ? (e) => onMapClick({ lat: e.latlng.lat, lng: e.latlng.lng }) : undefined} 
+          onMapReady={onMapReady} 
+        />
       </MapContainer>
     </div>
   );

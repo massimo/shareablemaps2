@@ -36,6 +36,7 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
   const [editingMarker, setEditingMarker] = useState<MarkerDoc | undefined>();
   const [pendingPosition, setPendingPosition] = useState<{ lat: number; lng: number; address?: string } | undefined>();
   const [pendingColor, setPendingColor] = useState<string>('#ef4444'); // Default red
+  const [pendingMarkerType, setPendingMarkerType] = useState<'pin' | 'circle'>('pin'); // Default pin
   const [isLoadingMap, setIsLoadingMap] = useState(true);
   const [mapError, setMapError] = useState<string | null>(null);
 
@@ -97,6 +98,7 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
     setEditingMarker(undefined);
     setShowMarkerForm(true);
     setPendingColor('#ef4444'); // Reset to default color for new marker
+    setPendingMarkerType('pin'); // Reset to default marker type for new marker
   }, []);
 
   const handleLocationSelect = useCallback((location: { lat: number; lng: number; address: string }) => {
@@ -105,6 +107,7 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
     setEditingMarker(undefined);
     setShowMarkerForm(true);
     setPendingColor('#ef4444'); // Reset to default color for new marker
+    setPendingMarkerType('pin'); // Reset to default marker type for new marker
     
     // Move the map to the selected location
     setMapCenter([location.lat, location.lng]);
@@ -113,6 +116,10 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
 
   const handleColorChange = useCallback((color: string) => {
     setPendingColor(color);
+  }, []);
+
+  const handleMarkerTypeChange = useCallback((markerType: 'pin' | 'circle') => {
+    setPendingMarkerType(markerType);
   }, []);
 
   const handleMarkerSave = useCallback((data: any) => {
@@ -221,6 +228,7 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
                   onClick={() => {
                     setPendingPosition(undefined);
                     setPendingColor('#ef4444'); // Reset color
+                    setPendingMarkerType('pin'); // Reset marker type
                   }}
                   className="mt-2 w-full text-xs text-gray-500 hover:text-gray-700 underline"
                 >
@@ -270,6 +278,7 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
                 }}
                 defaultPosition={pendingPosition}
                 onColorChange={handleColorChange}
+                onMarkerTypeChange={handleMarkerTypeChange}
               />
             )}
           </div>
@@ -282,6 +291,7 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
               markers={markers}
               pendingPosition={pendingPosition}
               pendingColor={pendingColor}
+              pendingMarkerType={pendingMarkerType}
             />
           </div>
         </>

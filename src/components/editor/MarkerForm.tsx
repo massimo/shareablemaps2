@@ -9,10 +9,11 @@ import { XMarkIcon, PhotoIcon } from '@heroicons/react/24/outline';
 
 interface MarkerFormProps {
   marker?: MarkerDoc;
-  onSave: (data: { title: string; categoryId?: string; address?: string; description?: string; tips: string[]; lat: number; lng: number; color?: string }) => void;
+  onSave: (data: { title: string; categoryId?: string; address?: string; description?: string; tips: string[]; lat: number; lng: number; color?: string; markerType?: 'pin' | 'circle' }) => void;
   onCancel: () => void;
   defaultPosition?: { lat: number; lng: number; address?: string };
   onColorChange?: (color: string) => void;
+  onMarkerTypeChange?: (type: 'pin' | 'circle') => void;
 }
 
 interface FormData {
@@ -22,6 +23,7 @@ interface FormData {
   description?: string;
   tips: string;
   color?: string;
+  markerType?: 'pin' | 'circle';
 }
 
 export default function MarkerForm({
@@ -30,6 +32,7 @@ export default function MarkerForm({
   onCancel,
   defaultPosition,
   onColorChange,
+  onMarkerTypeChange,
 }: MarkerFormProps) {
   // Predefined color palette
   const colorOptions = [
@@ -59,6 +62,7 @@ export default function MarkerForm({
       description: marker.description || '',
       tips: marker.tips?.join('\n') || '',
       color: marker.icon?.color || colorOptions[0].value,
+      markerType: marker.icon?.markerType || 'pin',
     } : {
       title: '',
       categoryId: '',
@@ -66,14 +70,21 @@ export default function MarkerForm({
       description: '',
       tips: '',
       color: colorOptions[0].value, // Default to red
+      markerType: 'pin' as const, // Default to pin
     },
   });
 
   const selectedColor = watch('color');
+  const selectedMarkerType = watch('markerType');
 
   const handleColorSelect = (color: string) => {
     setValue('color', color);
     onColorChange?.(color);
+  };
+
+  const handleMarkerTypeSelect = (type: 'pin' | 'circle') => {
+    setValue('markerType', type);
+    onMarkerTypeChange?.(type);
   };
 
   const onSubmit = (data: FormData) => {
@@ -89,6 +100,7 @@ export default function MarkerForm({
       lat: position.lat,
       lng: position.lng,
       color: data.color,
+      markerType: data.markerType,
     });
   };
 
@@ -124,21 +136,64 @@ export default function MarkerForm({
           )}
         </div>
 
+        {/* Marker Type Selector */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Marker Style
+          </label>
+          <div className="flex space-x-3">
+            <button
+              type="button"
+              onClick={() => handleMarkerTypeSelect('pin')}
+              className={`
+                flex items-center justify-center px-4 py-3 rounded-lg border-2 transition-all duration-200 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+                ${selectedMarkerType === 'pin' 
+                  ? 'border-blue-500 bg-blue-50 text-blue-700' 
+                  : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+                }
+              `}
+              title="Traditional pin marker"
+            >
+              <svg className="w-6 h-6 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+              </svg>
+              Pin
+            </button>
+            <button
+              type="button"
+              onClick={() => handleMarkerTypeSelect('circle')}
+              className={`
+                flex items-center justify-center px-4 py-3 rounded-lg border-2 transition-all duration-200 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+                ${selectedMarkerType === 'circle' 
+                  ? 'border-blue-500 bg-blue-50 text-blue-700' 
+                  : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+                }
+              `}
+              title="Simple circle marker"
+            >
+              <svg className="w-6 h-6 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10"/>
+              </svg>
+              Circle
+            </button>
+          </div>
+        </div>
+
         {/* Color Picker */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Marker Color
           </label>
           <div className="space-y-3">
-            {/* Color Options */}
-            <div className="grid grid-cols-5 gap-2">
+            {/* Color Options - Compact single row */}
+            <div className="flex flex-wrap gap-2">
               {colorOptions.map((color) => (
                 <button
                   key={color.value}
                   type="button"
                   onClick={() => handleColorSelect(color.value)}
                   className={`
-                    relative w-10 h-10 rounded-full border-2 transition-all duration-200 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+                    relative w-8 h-8 rounded-full border-2 transition-all duration-200 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1
                     ${selectedColor === color.value 
                       ? 'border-gray-800 ring-2 ring-gray-300' 
                       : 'border-gray-300 hover:border-gray-400'
@@ -150,7 +205,7 @@ export default function MarkerForm({
                 >
                   {selectedColor === color.value && (
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <svg className="w-4 h-4 text-white drop-shadow-lg" fill="currentColor" viewBox="0 0 20 20">
+                      <svg className="w-3 h-3 text-white drop-shadow-lg" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                       </svg>
                     </div>
@@ -158,39 +213,6 @@ export default function MarkerForm({
                 </button>
               ))}
             </div>
-            
-            {/* Color Preview */}
-            {selectedColor && (
-              <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                <div className="relative">
-                  <svg 
-                    className="w-6 h-6 drop-shadow-sm"
-                    style={{ 
-                      filter: selectedColor === '#ef4444' ? 'hue-rotate(0deg) brightness(1) saturate(1.5)' :
-                              selectedColor === '#3b82f6' ? 'hue-rotate(220deg) brightness(1.1) saturate(1.3)' :
-                              selectedColor === '#10b981' ? 'hue-rotate(140deg) brightness(1.1) saturate(1.4)' :
-                              selectedColor === '#f59e0b' ? 'hue-rotate(35deg) brightness(1.2) saturate(1.5)' :
-                              selectedColor === '#8b5cf6' ? 'hue-rotate(260deg) brightness(1.1) saturate(1.3)' :
-                              selectedColor === '#ec4899' ? 'hue-rotate(320deg) brightness(1.2) saturate(1.4)' :
-                              selectedColor === '#f97316' ? 'hue-rotate(25deg) brightness(1.1) saturate(1.5)' :
-                              selectedColor === '#14b8a6' ? 'hue-rotate(175deg) brightness(1.1) saturate(1.4)' :
-                              selectedColor === '#6366f1' ? 'hue-rotate(235deg) brightness(1.1) saturate(1.3)' :
-                              selectedColor === '#6b7280' ? 'grayscale(1) brightness(0.8)' : 'none'
-                    }}
-                    viewBox="0 0 24 24" 
-                    fill="#2563eb"
-                  >
-                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-                  </svg>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-900">
-                    Preview: {colorOptions.find(c => c.value === selectedColor)?.name || 'Custom'} Marker
-                  </p>
-                  <p className="text-xs text-gray-500">This is how your marker will appear on the map</p>
-                </div>
-              </div>
-            )}
           </div>
         </div>
 
