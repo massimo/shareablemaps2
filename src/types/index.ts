@@ -55,6 +55,7 @@ export interface MarkerIcon {
 
 export interface MarkerDoc {
   id?: string;
+  mapId: string; // Reference to the parent map
   title: string;
   categoryId?: string;
   lat: number;

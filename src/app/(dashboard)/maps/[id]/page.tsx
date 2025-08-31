@@ -2,12 +2,15 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import dynamic from 'next/dynamic';
+import { Timestamp } from 'firebase/firestore';
 import { MarkerDoc } from '@/types';
 import MarkerList from '@/components/editor/MarkerList';
 import MarkerForm from '@/components/editor/MarkerForm';
 import LocationSearch from '@/components/editor/LocationSearch';
 import { useMapStore } from '@/lib/store';
 import { getMapById } from '@/lib/mapService';
+import { MarkerService } from '@/lib/markerService';
+import { auth } from '@/lib/firebase';
 import { PlusIcon, MapIcon } from '@heroicons/react/24/outline';
 
 // Dynamically import MapCanvas to avoid SSR issues with Leaflet
@@ -69,6 +72,17 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
           }
           
           console.log('Map data loaded successfully:', mapData);
+          
+          // Try to load markers for this map (gracefully handle if Firebase isn't configured)
+          try {
+            const markersData = await MarkerService.getMarkersByMapId(id);
+            setMarkers(markersData);
+            console.log('Markers loaded:', markersData.length);
+          } catch (markerError) {
+            console.warn('Could not load markers (Firebase may not be configured):', markerError);
+            // Continue without markers - they'll be stored locally until Firebase is set up
+            setMarkers([]);
+          }
         } else {
           // Map not found
           console.error('Map not found:', id);
@@ -122,49 +136,94 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
     setPendingMarkerType(markerType);
   }, []);
 
-  const handleMarkerSave = useCallback((data: any) => {
-    // TODO: Save to Firebase
-    const newMarker: MarkerDoc = {
-      id: editingMarker?.id || `marker-${Date.now()}`,
-      title: data.title,
-      categoryId: data.categoryId,
-      lat: data.lat,
-      lng: data.lng,
-      address: data.address,
-      description: data.description,
-      tips: data.tips,
-      icon: data.color ? {
-        library: 'default' as const,
-        name: 'marker',
-        color: data.color,
-      } : undefined,
-      createdAt: new Date() as any,
-      updatedAt: new Date() as any,
-      createdBy: 'current-user', // TODO: Get from auth
-    };
+    const handleMarkerSave = useCallback(async (data: any) => {
+    try {
+      const currentUser = auth.currentUser;
+      const userId = currentUser?.uid || 'anonymous-user'; // Fallback for development
 
-    if (editingMarker) {
-      setMarkers(prev => prev.map(m => m.id === editingMarker.id ? newMarker : m));
-    } else {
-      setMarkers(prev => [...prev, newMarker]);
+      console.log('Saving marker with data:', data);
+      console.log('Current user:', currentUser?.uid || 'anonymous');
+
+      const markerData = {
+        mapId: id, // Link marker to this map
+        title: data.title,
+        categoryId: data.categoryId,
+        lat: data.lat,
+        lng: data.lng,
+        address: data.address,
+        description: data.description,
+        tips: data.tips || [],
+        icon: {
+          library: 'default' as const,
+          name: 'marker',
+          color: data.color,
+          markerType: data.markerType || 'pin',
+        },
+        createdBy: userId,
+      };
+
+      console.log('Marker data to save:', markerData);
+
+      let savedMarker: MarkerDoc;
+      
+      if (editingMarker?.id) {
+        // Update existing marker
+        console.log('Updating existing marker:', editingMarker.id);
+        await MarkerService.updateMarker(editingMarker.id, markerData);
+        savedMarker = {
+          ...markerData,
+          id: editingMarker.id,
+          createdAt: editingMarker.createdAt,
+          updatedAt: Timestamp.now(),
+        };
+        setMarkers(prev => prev.map(m => m.id === editingMarker.id ? savedMarker : m));
+        console.log('Marker updated successfully');
+      } else {
+        // Create new marker
+        console.log('Creating new marker');
+        savedMarker = await MarkerService.createMarker(id, markerData);
+        setMarkers(prev => [...prev, savedMarker]);
+        console.log('Marker created successfully:', savedMarker);
+      }
+
+      setShowMarkerForm(false);
+      setEditingMarker(undefined);
+      setPendingPosition(undefined); // Clear pending position after saving
+      setPendingColor('#ef4444'); // Reset to default color
+      setPendingMarkerType('pin'); // Reset to default marker type
+    } catch (error) {
+      console.error('Error saving marker:', error);
+      const err = error as any;
+      console.error('Full error details:', {
+        name: err.name,
+        message: err.message,
+        code: err.code,
+        stack: err.stack
+      });
+      // TODO: Show error toast/notification
+      alert(`Failed to save marker: ${err.message || 'Unknown error'}`);
     }
-
-    setShowMarkerForm(false);
-    setEditingMarker(undefined);
-    setPendingPosition(undefined); // Clear pending position only after saving
-    setPendingColor('#ef4444'); // Reset to default color
-  }, [editingMarker]);
+  }, [editingMarker, id]);
 
   const handleMarkerEdit = useCallback((marker: MarkerDoc) => {
     setEditingMarker(marker);
     setShowMarkerForm(true);
     setPendingPosition(undefined);
     setPendingColor(marker.icon?.color || '#ef4444'); // Use marker's existing color or default
+    setPendingMarkerType(marker.icon?.markerType || 'pin'); // Use marker's existing type or default
   }, []);
 
-  const handleMarkerDelete = useCallback((markerId: string) => {
-    // TODO: Delete from Firebase
-    setMarkers(prev => prev.filter(m => m.id !== markerId));
+  const handleMarkerDelete = useCallback(async (markerId: string) => {
+    try {
+      // Try to delete from Firebase first
+      await MarkerService.deleteMarker(markerId);
+      setMarkers(prev => prev.filter(m => m.id !== markerId));
+      console.log('Marker deleted from Firebase successfully');
+    } catch (firebaseError) {
+      console.warn('Firebase delete failed, removing locally:', firebaseError);
+      // Fall back to local removal if Firebase isn't configured
+      setMarkers(prev => prev.filter(m => m.id !== markerId));
+    }
   }, []);
 
   const handleMarkerSelect = useCallback((marker: MarkerDoc) => {
