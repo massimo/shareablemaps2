@@ -46,11 +46,21 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
   const [isLoadingMap, setIsLoadingMap] = useState(true);
   const [mapError, setMapError] = useState<string | null>(null);
   const mapRef = React.useRef<L.Map | null>(null); // Add map reference for programmatic control
+  const clickTimeoutRef = React.useRef<NodeJS.Timeout | null>(null); // For handling click delay
 
   const { setMapCenter, setMapZoom, setMapTitle, mapTitle, mapCenter } = useMapStore();
   
   // Unwrap params using React.use()
   const { id } = React.use(params);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (clickTimeoutRef.current) {
+        clearTimeout(clickTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Load map data from database
   useEffect(() => {
@@ -140,12 +150,26 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
   const handleMapClick = useCallback((e: { lat: number; lng: number }) => {
     console.log('Map clicked at:', e.lat, e.lng);
     
-    // Set pending position and show confirmation modal
-    setPendingPosition({ lat: e.lat, lng: e.lng });
-    setShowAddMarkerConfirm(true);
-    setEditingMarker(undefined);
-    setPendingColor('#ef4444'); // Reset to default color for new marker
-    setPendingMarkerType('pin'); // Reset to default marker type for new marker
+    // Clear any existing timeout to handle double-click detection
+    if (clickTimeoutRef.current) {
+      clearTimeout(clickTimeoutRef.current);
+      clickTimeoutRef.current = null;
+      return; // This was a double-click, let Leaflet handle zoom
+    }
+    
+    // Set a timeout for single-click detection
+    clickTimeoutRef.current = setTimeout(() => {
+      console.log('Single click confirmed, showing add marker confirmation');
+      
+      // Set pending position and show confirmation modal
+      setPendingPosition({ lat: e.lat, lng: e.lng });
+      setShowAddMarkerConfirm(true);
+      setEditingMarker(undefined);
+      setPendingColor('#ef4444'); // Reset to default color for new marker
+      setPendingMarkerType('pin'); // Reset to default marker type for new marker
+      
+      clickTimeoutRef.current = null;
+    }, 250); // 250ms delay to detect double-click
   }, []);
 
   const handleAddMarkerConfirm = useCallback(() => {
