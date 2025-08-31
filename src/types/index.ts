@@ -30,10 +30,21 @@ export interface MapDoc {
   title: string;
   description?: string;
   coverUrl?: string;
+  mainLocation?: {
+    lat: number;
+    lng: number;
+    address: string;
+    city?: string;
+  };
   createdAt: Timestamp;
   updatedAt: Timestamp;
   isPublicLinkEnabled: boolean;
   shareId?: string;
+  shareSettings?: {
+    shareType: 'private' | 'public' | 'password';
+    password?: string;
+    isEnabled: boolean;
+  };
   stats: MapStats;
   categories: MapCategory[];
   tags?: string[];
@@ -44,10 +55,12 @@ export interface MarkerIcon {
   library: 'default' | 'heroicons';
   name: string;
   color?: string;
+  markerType?: 'pin' | 'circle';
 }
 
 export interface MarkerDoc {
   id?: string;
+  mapId: string; // Reference to the parent map
   title: string;
   categoryId?: string;
   lat: number;
@@ -149,6 +162,7 @@ export interface LocationCandidate {
   type: string;
   importance: number;
   place_id: string;
+  distance?: number;
 }
 
 // Form Types
