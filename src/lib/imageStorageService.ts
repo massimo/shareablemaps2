@@ -27,7 +27,7 @@ export class ImageStorageService {
   /**
    * Generate a thumbnail from base64 image
    */
-  static generateThumbnail(base64Image: string, maxWidth: number = 200): Promise<string> {
+  static generateThumbnail(base64Image: string, maxWidth: number = 150): Promise<string> {
     return new Promise((resolve, reject) => {
       const img = new Image();
       img.onload = () => {
@@ -44,10 +44,46 @@ export class ImageStorageService {
         canvas.width = img.width * ratio;
         canvas.height = img.height * ratio;
 
-        // Draw and compress
+        // Draw and compress heavily for thumbnails
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        const thumbnailBase64 = canvas.toDataURL('image/jpeg', 0.7);
+        const thumbnailBase64 = canvas.toDataURL('image/jpeg', 0.4); // Very low quality for thumbnails
         resolve(thumbnailBase64);
+      };
+      
+      img.onerror = () => reject(new Error('Failed to load image'));
+      img.src = base64Image;
+    });
+  }
+
+  /**
+   * Generate an optimized image for database storage
+   * This creates an even more compressed version for storage
+   */
+  static generateStorageOptimized(base64Image: string, maxWidth: number = 800): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        if (!ctx) {
+          reject(new Error('Canvas context not available'));
+          return;
+        }
+
+        // Calculate new dimensions for storage
+        const ratio = Math.min(maxWidth / img.width, maxWidth / img.height);
+        canvas.width = img.width * ratio;
+        canvas.height = img.height * ratio;
+
+        // Apply image smoothing for better compression
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        
+        // Draw and compress for database storage
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const optimizedBase64 = canvas.toDataURL('image/jpeg', 0.3); // Very aggressive compression
+        resolve(optimizedBase64);
       };
       
       img.onerror = () => reject(new Error('Failed to load image'));
@@ -64,10 +100,10 @@ export class ImageStorageService {
       return { valid: false, error: 'File must be an image' };
     }
 
-    // Check file size (max 10MB)
-    const maxSize = 10 * 1024 * 1024; // 10MB
+    // Check file size (max 20MB)
+    const maxSize = 20 * 1024 * 1024; // 20MB
     if (file.size > maxSize) {
-      return { valid: false, error: 'Image must be smaller than 10MB' };
+      return { valid: false, error: 'Image must be smaller than 20MB' };
     }
 
     // Check file name

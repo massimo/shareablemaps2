@@ -37,21 +37,32 @@ export default function ImageUpload({
   const [isCompressing, setIsCompressing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Image compression options
-  const compressionOptions = {
-    maxSizeMB: 1, // Maximum 1MB per image
-    maxWidthOrHeight: 1920, // Maximum dimension
-    useWebWorker: true,
-    fileType: 'image/jpeg' as const,
-    quality: 0.8,
-  };
-
   const compressImage = async (file: File): Promise<File> => {
     try {
-      const compressedFile = await imageCompression(file, compressionOptions);
-      console.log('Original file size:', file.size / 1024 / 1024, 'MB');
-      console.log('Compressed file size:', compressedFile.size / 1024 / 1024, 'MB');
-      return compressedFile;
+      console.log(`Compressing ${file.name}: ${(file.size / 1024 / 1024).toFixed(2)}MB`);
+      
+      // Two-stage compression for better results
+      // Stage 1: Initial compression to reasonable size
+      const firstStage = await imageCompression(file, {
+        maxSizeMB: 2,
+        maxWidthOrHeight: 1200,
+        useWebWorker: true,
+        initialQuality: 0.8
+      });
+
+      // Stage 2: Aggressive compression for database storage
+      const finalCompressed = await imageCompression(firstStage, {
+        maxSizeMB: 0.2,
+        maxWidthOrHeight: 800,
+        useWebWorker: true,
+        initialQuality: 0.4,
+        fileType: 'image/jpeg'
+      });
+
+      const compressionRatio = ((file.size - finalCompressed.size) / file.size * 100).toFixed(1);
+      console.log(`${file.name} compressed: ${(file.size / 1024 / 1024).toFixed(2)}MB → ${(finalCompressed.size / 1024 / 1024).toFixed(2)}MB (${compressionRatio}% reduction)`);
+
+      return finalCompressed;
     } catch (error) {
       console.error('Error compressing image:', error);
       throw error;
@@ -259,7 +270,7 @@ export default function ImageUpload({
               {dragActive ? 'Drop images here' : 'Drag & drop images here, or click to browse'}
             </p>
             <p className={`text-xs ${disabled ? 'text-gray-300' : 'text-gray-500'}`}>
-              PNG, JPG, WebP up to 10MB each (max {maxImages} images)
+              PNG, JPG, WebP up to 20MB each (max {maxImages} images)
             </p>
           </div>
         </div>
