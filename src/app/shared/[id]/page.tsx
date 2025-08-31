@@ -46,6 +46,7 @@ export default function SharedMapPage({ params }: SharedMapPageProps) {
   const [showDirectionsModal, setShowDirectionsModal] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<'expanded' | 'compact'>('expanded');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Mobile sidebar state
   
   // Access control states
   const [isLoading, setIsLoading] = useState(true);
@@ -56,6 +57,18 @@ export default function SharedMapPage({ params }: SharedMapPageProps) {
   const [accessError, setAccessError] = useState<string>();
 
   const mapRef = useRef<L.Map | null>(null);
+
+  // Handle window resize to auto-close sidebar on desktop
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024 && isSidebarOpen) {
+        setIsSidebarOpen(false);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [isSidebarOpen]);
 
   // Resolve params
   useEffect(() => {
@@ -247,6 +260,11 @@ export default function SharedMapPage({ params }: SharedMapPageProps) {
     setSelectedMarkerId(marker.id);
     setSelectedMarker(marker);
     
+    // Close sidebar on mobile when marker is selected
+    if (window.innerWidth < 1024) { // lg breakpoint
+      setIsSidebarOpen(false);
+    }
+    
     // Center and zoom to the selected marker
     if (mapRef.current && marker.lat && marker.lng) {
       mapRef.current.flyTo([marker.lat, marker.lng], 16, {
@@ -318,97 +336,142 @@ export default function SharedMapPage({ params }: SharedMapPageProps) {
   }
 
   return (
-    <div className="h-screen flex bg-gray-50">
-      {/* Left Sidebar */}
-      <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
-        {/* Header */}
-        <div className="p-4 border-b border-gray-200">
-          <h1 className="text-lg font-semibold text-gray-900 mb-3">{mapTitle}</h1>
-          
-          {/* Search */}
-          <MarkerSearch
-            markers={markers}
-            onMarkerSelect={handleMarkerSelect}
-            className="mb-3"
-          />
+    <div className="h-screen w-screen overflow-hidden bg-gray-50 relative">
+      {/* Mobile Burger Menu Button */}
+      <button
+        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+        className="lg:hidden fixed top-4 left-4 z-[2000] bg-white rounded-lg shadow-lg p-3 hover:bg-gray-50 transition-colors"
+        style={{ 
+          display: isSidebarOpen ? 'none' : 'block' // Hide when sidebar is open to avoid visual conflict
+        }}
+        aria-label="Toggle sidebar"
+      >
+        <Bars3Icon className="h-6 w-6 text-gray-700" />
+      </button>
 
-          {/* Category Filter */}
-          <div className="flex items-center justify-between mb-3">
-          <CategoryFilter
-            availableCategories={availableCategories}
-            hasUncategorizedMarkers={hasUncategorizedMarkers}
-            selectedCategories={selectedCategories}
-            onCategoriesChange={handleCategoryFilterChange}
-          />            {/* View Toggle */}
-            <div className="flex items-center space-x-1 bg-gray-100 rounded-md p-1">
+      {/* Mobile Overlay */}
+      {isSidebarOpen && (
+        <div 
+          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-[1500]"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
+      <div className="flex h-full">
+        {/* Left Panel - Collapsible on Mobile */}
+        <div className={`
+          ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+          fixed lg:relative top-0 left-0 h-full w-80 bg-white border-r border-gray-200 flex flex-col z-[1600] lg:z-auto
+          transition-transform duration-300 ease-in-out
+        `}>
+          {/* Header */}
+          <div className="p-4 border-b border-gray-200 space-y-4">
+            {/* Close button for mobile */}
+            <div className="lg:hidden flex justify-between items-center">
+              <h1 className="text-lg font-semibold text-gray-900 truncate">{mapTitle}</h1>
               <button
-                onClick={() => setViewMode('expanded')}
-                className={`p-1.5 rounded transition-colors ${
-                  viewMode === 'expanded'
-                    ? 'bg-white text-blue-600 shadow-sm'
-                    : 'text-gray-400 hover:text-gray-600'
-                }`}
-                title="Expanded view"
+                onClick={() => setIsSidebarOpen(false)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                aria-label="Close sidebar"
               >
-                <Squares2X2Icon className="h-4 w-4" />
-              </button>
-              <button
-                onClick={() => setViewMode('compact')}
-                className={`p-1.5 rounded transition-colors ${
-                  viewMode === 'compact'
-                    ? 'bg-white text-blue-600 shadow-sm'
-                    : 'text-gray-400 hover:text-gray-600'
-                }`}
-                title="Compact view"
-              >
-                <Bars3Icon className="h-4 w-4" />
+                <svg className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
             </div>
+
+            {/* Desktop header */}
+            <div className="hidden lg:block">
+              <h1 className="text-lg font-semibold text-gray-900 truncate">{mapTitle}</h1>
+            </div>
+
+            {/* Search */}
+            <MarkerSearch
+              markers={markers}
+              onMarkerSelect={handleMarkerSelect}
+              className="mb-3"
+            />
+
+            {/* Category Filter & View Toggle */}
+            <div className="flex items-center justify-between">
+              <CategoryFilter
+                availableCategories={availableCategories}
+                hasUncategorizedMarkers={hasUncategorizedMarkers}
+                selectedCategories={selectedCategories}
+                onCategoriesChange={handleCategoryFilterChange}
+              />
+              
+              {/* View Toggle */}
+              <div className="flex items-center space-x-1 bg-gray-100 rounded-md p-1">
+                <button
+                  onClick={() => setViewMode('expanded')}
+                  className={`p-1.5 rounded transition-colors ${
+                    viewMode === 'expanded'
+                      ? 'bg-white text-blue-600 shadow-sm'
+                      : 'text-gray-400 hover:text-gray-600'
+                  }`}
+                  title="Expanded view"
+                >
+                  <Squares2X2Icon className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => setViewMode('compact')}
+                  className={`p-1.5 rounded transition-colors ${
+                    viewMode === 'compact'
+                      ? 'bg-white text-blue-600 shadow-sm'
+                      : 'text-gray-400 hover:text-gray-600'
+                  }`}
+                  title="Compact view"
+                >
+                  <Bars3Icon className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
 
-        {/* Marker List */}
-        <div className="flex-1 overflow-hidden">
-          <MarkerList
-            markers={filteredMarkers}
-            onMarkerEdit={() => {}} // No-op for read-only mode
-            onMarkerDelete={() => {}} // No-op for read-only mode
-            onMarkerSelect={handleMarkerSelect}
-            selectedMarkerId={selectedMarkerId}
-            viewMode={viewMode}
-          />
-        </div>
-      </div>
-
-      {/* Right Panel - Full Screen Map */}
-      <div className="flex-1 relative">
-        <MapCanvas
-          onMapClick={() => {}} // No-op for read-only mode
-          onMarkerSelect={handleMarkerSelect}
-          onMapReady={handleMapReady}
-          className="h-full"
-          markers={markers}
-          selectedMarkerId={selectedMarkerId}
-          center={mapCenter}
-          zoom={mapZoom}
-        />
-        
-        {/* Marker Card Overlay */}
-        {selectedMarker && (
-          <div className="absolute top-4 right-4 w-80 z-[1000]">
-            <MarkerCard
-              marker={selectedMarker}
-              onClose={handleMarkerCardClose}
-              onDirections={handleDirections}
+          {/* Marker List */}
+          <div className="flex-1 overflow-hidden">
+            <MarkerList
+              markers={filteredMarkers}
+              onMarkerEdit={() => {}} // No-op for read-only mode
+              onMarkerDelete={() => {}} // No-op for read-only mode
+              onMarkerSelect={handleMarkerSelect}
+              selectedMarkerId={selectedMarkerId}
+              viewMode={viewMode}
             />
           </div>
-        )}
+        </div>
 
-        {/* Map Title Overlay */}
-        <div className="absolute top-4 left-4 z-[1000]">
-          <div className="bg-white bg-opacity-90 backdrop-blur-sm rounded-lg px-4 py-2 shadow-lg">
-            <h2 className="text-lg font-semibold text-gray-900">{mapTitle}</h2>
-            <p className="text-sm text-gray-600">Shared Map • Read Only</p>
+        {/* Right Panel - Full Screen Map */}
+        <div className="flex-1 relative">
+          <MapCanvas
+            onMapClick={() => {}} // No-op for read-only mode
+            onMarkerSelect={handleMarkerSelect}
+            onMapReady={handleMapReady}
+            className="h-full"
+            markers={markers}
+            selectedMarkerId={selectedMarkerId}
+            center={mapCenter}
+            zoom={mapZoom}
+          />
+          
+          {/* Marker Card Overlay - Responsive */}
+          {selectedMarker && (
+            <div className="absolute inset-x-4 top-4 sm:top-4 sm:right-4 sm:left-auto sm:w-80 sm:max-w-[calc(100vw-2rem)] z-[1000]">
+              <MarkerCard
+                marker={selectedMarker}
+                onClose={handleMarkerCardClose}
+                onDirections={handleDirections}
+              />
+            </div>
+          )}
+
+          {/* Map Title Overlay - Hidden on mobile when sidebar is open */}
+          <div className={`absolute top-4 left-4 z-[1000] ${isSidebarOpen ? 'lg:block hidden' : 'block'}`}>
+            <div className="bg-white bg-opacity-90 backdrop-blur-sm rounded-lg px-4 py-2 shadow-lg">
+              <h2 className="text-lg font-semibold text-gray-900">{mapTitle}</h2>
+              <p className="text-sm text-gray-600">Shared Map • Read Only</p>
+            </div>
           </div>
         </div>
       </div>
