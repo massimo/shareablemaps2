@@ -366,12 +366,12 @@ export default function SharedMapPage({ params }: SharedMapPageProps) {
 
   return (
     <div className="h-screen w-screen overflow-hidden bg-gray-50 relative">
-      {/* Mobile Burger Menu Button */}
+      {/* Mobile Burger Menu Button - Hidden by default, only show on mobile */}
       <button
         onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-        className="lg:hidden fixed top-4 left-4 z-[2000] bg-white rounded-lg shadow-lg p-3 hover:bg-gray-50 transition-colors"
+        className="hidden sm:hidden md:hidden lg:hidden xl:hidden 2xl:hidden max-sm:block fixed top-4 left-4 z-[2000] bg-white rounded-lg shadow-lg p-3 hover:bg-gray-50 transition-colors"
         style={{ 
-          display: isSidebarOpen ? 'none' : 'block' // Hide when sidebar is open to avoid visual conflict
+          display: isSidebarOpen ? 'none' : undefined // Only hide when sidebar is open, let CSS classes handle responsive behavior
         }}
         aria-label="Toggle sidebar"
       >
@@ -495,11 +495,11 @@ export default function SharedMapPage({ params }: SharedMapPageProps) {
             </div>
           )}
 
-          {/* Map Title Overlay - Hidden on mobile when sidebar is open */}
-          <div className={`absolute top-4 left-4 z-[1000] ${isSidebarOpen ? 'lg:block hidden' : 'block'}`}>
+          {/* Map Title Overlay - Mobile only, hidden on desktop */}
+          <div className={`absolute z-[1000] lg:hidden ${isSidebarOpen ? 'hidden' : 'block'} top-5 left-1/2 transform -translate-x-1/2`}>
             <div className="bg-white bg-opacity-90 backdrop-blur-sm rounded-lg px-4 py-2 shadow-lg">
-              <h2 className="text-lg font-semibold text-gray-900">{mapTitle}</h2>
-              <p className="text-sm text-gray-600">Shared Map • Read Only</p>
+              <h2 className="text-lg font-semibold text-gray-900 text-center">{mapTitle}</h2>
+              <p className="text-sm text-gray-600 text-center">Shared Map • Read Only</p>
             </div>
           </div>
         </div>
