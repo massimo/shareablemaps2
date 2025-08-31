@@ -15,6 +15,7 @@ import { getMapById } from '@/lib/mapService';
 import { MarkerService } from '@/lib/markerService';
 import { auth } from '@/lib/firebase';
 import { MapIcon } from '@heroicons/react/24/outline';
+import { Bars3Icon, Squares2X2Icon } from '@heroicons/react/24/outline';
 
 // Dynamically import MapCanvas to avoid SSR issues with Leaflet
 const MapCanvas = dynamic(() => import('@/components/editor/MapCanvas'), {
@@ -39,6 +40,7 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
   const [markers, setMarkers] = useState<MarkerDoc[]>([]);
   const [selectedMarkerId, setSelectedMarkerId] = useState<string>();
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [viewMode, setViewMode] = useState<'expanded' | 'compact'>('expanded');
   const [showMarkerForm, setShowMarkerForm] = useState(false);
   const [showAddMarkerConfirm, setShowAddMarkerConfirm] = useState(false);
   const [editingMarker, setEditingMarker] = useState<MarkerDoc | undefined>();
@@ -336,7 +338,6 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
       const markerData = {
         mapId: id, // Link marker to this map
         title: data.title,
-        categoryId: data.categoryId,
         lat: data.lat,
         lng: data.lng,
         address: data.address,
@@ -349,18 +350,27 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
           markerType: data.markerType || 'pin',
         },
         createdBy: userId,
+        ...(data.categoryId ? { categoryId: data.categoryId } : {}), // Only include categoryId if it exists
       };
 
-      console.log('Marker data to save:', markerData);
+      // For updates, we need to handle categoryId removal explicitly
+      const updateData = editingMarker?.id ? {
+        ...markerData,
+        categoryId: data.categoryId || undefined, // Explicitly pass undefined to trigger deletion
+      } : markerData;
+
+      console.log('Marker data to save:', updateData);
 
       let savedMarker: MarkerDoc;
       
       if (editingMarker?.id) {
         // Update existing marker
         console.log('Updating existing marker:', editingMarker.id);
-        await MarkerService.updateMarker(editingMarker.id, markerData);
+        await MarkerService.updateMarker(editingMarker.id, updateData);
         savedMarker = {
-          ...markerData,
+          ...editingMarker, // Start with existing marker data
+          ...markerData, // Apply updates
+          categoryId: data.categoryId || undefined, // Ensure categoryId is properly set or undefined
           id: editingMarker.id,
           createdAt: editingMarker.createdAt,
           updatedAt: Timestamp.now(),
@@ -533,7 +543,7 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
             {/* Marker List */}
             <div className="flex-1 overflow-auto">
               <div className="p-3 bg-gray-50 border-b border-gray-200">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between mb-3">
                   <div>
                     <p className="text-xs text-gray-600">
                       {filteredMarkers.length} of {markers.length} marker{markers.length !== 1 ? 's' : ''}
@@ -572,6 +582,35 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
                     ) : null;
                   })()}
                 </div>
+                
+                {/* View Toggle Buttons */}
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-gray-700">View</span>
+                  <div className="flex items-center space-x-1 bg-white rounded-md p-1 border border-gray-200">
+                    <button
+                      onClick={() => setViewMode('expanded')}
+                      className={`p-1.5 rounded transition-colors ${
+                        viewMode === 'expanded'
+                          ? 'bg-blue-100 text-blue-600'
+                          : 'text-gray-400 hover:text-gray-600'
+                      }`}
+                      title="Expanded view"
+                    >
+                      <Squares2X2Icon className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => setViewMode('compact')}
+                      className={`p-1.5 rounded transition-colors ${
+                        viewMode === 'compact'
+                          ? 'bg-blue-100 text-blue-600'
+                          : 'text-gray-400 hover:text-gray-600'
+                      }`}
+                      title="Compact view"
+                    >
+                      <Bars3Icon className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
               </div>
               <MarkerList
                 markers={filteredMarkers}
@@ -579,6 +618,7 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
                 onMarkerDelete={handleMarkerDelete}
                 onMarkerSelect={handleMarkerSelect}
                 selectedMarkerId={selectedMarkerId}
+                viewMode={viewMode}
               />
             </div>
 

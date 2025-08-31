@@ -11,6 +11,7 @@ interface MarkerListProps {
   onMarkerDelete: (markerId: string) => void;
   onMarkerSelect: (marker: MarkerDoc) => void;
   selectedMarkerId?: string;
+  viewMode?: 'expanded' | 'compact';
 }
 
 export default function MarkerList({
@@ -19,6 +20,7 @@ export default function MarkerList({
   onMarkerDelete,
   onMarkerSelect,
   selectedMarkerId,
+  viewMode = 'expanded',
 }: MarkerListProps) {
   if (markers.length === 0) {
     return (
@@ -33,32 +35,37 @@ export default function MarkerList({
   }
 
   return (
-    <div className="space-y-2">
+    <div className={viewMode === 'compact' ? 'space-y-1' : 'space-y-2'}>
       {markers.map((marker) => (
         <div
           key={marker.id}
-          className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+          className={`${viewMode === 'compact' ? 'p-2' : 'p-3'} rounded-lg border cursor-pointer transition-colors ${
             selectedMarkerId === marker.id
               ? 'border-blue-500 bg-blue-50'
               : 'border-gray-200 bg-white hover:bg-gray-50'
           }`}
           onClick={() => onMarkerSelect(marker)}
         >
-          <div className="flex items-start justify-between">
+          <div className={`flex items-${viewMode === 'compact' ? 'center' : 'start'} justify-between`}>
             <div className="flex-1 min-w-0">
               <div className="flex items-center">
-                {/* Show colored marker icon instead of generic MapPinIcon */}
+                {/* Show colored marker icon */}
                 {marker.icon?.color ? (
                   <div className="flex items-center mr-2 flex-shrink-0">
                     {marker.icon.markerType === 'circle' ? (
                       <div
-                        className="w-4 h-4 rounded-full border-2 border-white shadow-sm"
+                        className={`${viewMode === 'compact' ? 'w-3 h-3' : 'w-4 h-4'} rounded-full border-2 border-white shadow-sm`}
                         style={{ backgroundColor: marker.icon.color }}
                         title={`${marker.icon.markerType} marker`}
                       />
                     ) : (
-                      <div className="relative w-4 h-5">
-                        <svg width="16" height="20" viewBox="0 0 16 20" className="drop-shadow-sm">
+                      <div className={`relative ${viewMode === 'compact' ? 'w-3 h-4' : 'w-4 h-5'}`}>
+                        <svg 
+                          width={viewMode === 'compact' ? 12 : 16} 
+                          height={viewMode === 'compact' ? 15 : 20} 
+                          viewBox="0 0 16 20" 
+                          className="drop-shadow-sm"
+                        >
                           <path
                             d="M8 0C3.6 0 0 3.6 0 8c0 5.2 8 12 8 12s8-6.8 8-12c0-4.4-3.6-8-8-8z"
                             fill={marker.icon.color}
@@ -71,31 +78,37 @@ export default function MarkerList({
                     )}
                   </div>
                 ) : (
-                  <MapPinIcon className="h-4 w-4 text-gray-400 mr-2 flex-shrink-0" />
+                  <MapPinIcon className={`${viewMode === 'compact' ? 'h-3 w-3' : 'h-4 w-4'} text-gray-400 mr-2 flex-shrink-0`} />
                 )}
-                <h4 className="text-sm font-medium text-gray-900 truncate">
+                <h4 className={`${viewMode === 'compact' ? 'text-sm' : 'text-sm'} font-medium text-gray-900 truncate`}>
                   {marker.title}
                 </h4>
               </div>
-              {marker.categoryId && (
-                <div className="mt-1 flex items-center">
-                  <span className="text-sm mr-1" role="img">
-                    {getCategoryById(marker.categoryId)?.icon}
-                  </span>
-                  <span className="text-xs text-gray-500">
-                    {getCategoryById(marker.categoryId)?.name}
-                  </span>
-                </div>
-              )}
-              {marker.address && (
-                <p className="mt-1 text-xs text-gray-500 truncate">
-                  {marker.address}
-                </p>
-              )}
-              {marker.description && (
-                <p className="mt-1 text-xs text-gray-600 line-clamp-2">
-                  {marker.description}
-                </p>
+              
+              {/* Only show additional details in expanded view */}
+              {viewMode === 'expanded' && (
+                <>
+                  {marker.categoryId && (
+                    <div className="mt-1 flex items-center">
+                      <span className="text-sm mr-1" role="img">
+                        {getCategoryById(marker.categoryId)?.icon}
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        {getCategoryById(marker.categoryId)?.name}
+                      </span>
+                    </div>
+                  )}
+                  {marker.address && (
+                    <p className="mt-1 text-xs text-gray-500 truncate">
+                      {marker.address}
+                    </p>
+                  )}
+                  {marker.description && (
+                    <p className="mt-1 text-xs text-gray-600 line-clamp-2">
+                      {marker.description}
+                    </p>
+                  )}
+                </>
               )}
             </div>
             
@@ -105,10 +118,10 @@ export default function MarkerList({
                   e.stopPropagation();
                   onMarkerEdit(marker);
                 }}
-                className="p-1 text-gray-400 hover:text-blue-600 focus:outline-none focus:text-blue-600"
+                className={`${viewMode === 'compact' ? 'p-0.5' : 'p-1'} text-gray-400 hover:text-blue-600 focus:outline-none focus:text-blue-600`}
                 aria-label="Edit marker"
               >
-                <PencilIcon className="h-4 w-4" />
+                <PencilIcon className={`${viewMode === 'compact' ? 'h-3 w-3' : 'h-4 w-4'}`} />
               </button>
               <button
                 onClick={(e) => {
@@ -117,10 +130,10 @@ export default function MarkerList({
                     onMarkerDelete(marker.id);
                   }
                 }}
-                className="p-1 text-gray-400 hover:text-red-600 focus:outline-none focus:text-red-600"
+                className={`${viewMode === 'compact' ? 'p-0.5' : 'p-1'} text-gray-400 hover:text-red-600 focus:outline-none focus:text-red-600`}
                 aria-label="Delete marker"
               >
-                <TrashIcon className="h-4 w-4" />
+                <TrashIcon className={`${viewMode === 'compact' ? 'h-3 w-3' : 'h-4 w-4'}`} />
               </button>
             </div>
           </div>

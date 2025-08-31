@@ -9,7 +9,8 @@ import {
   where, 
   orderBy,
   Timestamp,
-  serverTimestamp 
+  serverTimestamp,
+  deleteField
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { MarkerDoc } from '@/types';
@@ -61,10 +62,19 @@ export class MarkerService {
   static async updateMarker(markerId: string, updates: Partial<Omit<MarkerDoc, 'id' | 'createdAt' | 'updatedAt'>>): Promise<void> {
     try {
       const markerRef = doc(db, this.COLLECTION, markerId);
-      await updateDoc(markerRef, {
+      
+      // Handle the case where categoryId should be removed
+      const updateData: any = {
         ...updates,
         updatedAt: serverTimestamp(),
-      });
+      };
+      
+      // If categoryId is explicitly undefined or null, remove it from the document
+      if ('categoryId' in updates && !updates.categoryId) {
+        updateData.categoryId = deleteField();
+      }
+      
+      await updateDoc(markerRef, updateData);
     } catch (error) {
       console.error('Error updating marker:', error);
       throw new Error('Failed to update marker');

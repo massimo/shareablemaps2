@@ -105,6 +105,7 @@ export default function MarkerForm({
     
     onSave({
       ...data,
+      categoryId: data.categoryId && data.categoryId.trim() ? data.categoryId : undefined,
       tips: data.tips ? data.tips.split('\n').map(tip => tip.trim()).filter(Boolean) : [],
       lat: position.lat,
       lng: position.lng,
