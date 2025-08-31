@@ -13,7 +13,7 @@ import {
 } from '@heroicons/react/24/outline';
 
 const navigation = [
-  { name: 'Dashboard', href: '/dashboard/dashboard', icon: ChartBarIcon },
+  { name: 'Dashboard', href: '/', icon: ChartBarIcon },
   { name: 'My Maps', href: '/dashboard/maps', icon: MapIcon },
   { name: 'Shared with me', href: '/dashboard/shared', icon: ShareIcon },
   { name: 'Help', href: '/dashboard/help', icon: QuestionMarkCircleIcon },
@@ -56,7 +56,9 @@ export default function Sidebar() {
         {/* Navigation */}
         <nav className="flex-1 space-y-1 px-2 pb-4">
           {navigation.map((item) => {
-            const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+            const isActive = item.href === '/' 
+              ? pathname === '/'
+              : pathname === item.href || pathname.startsWith(item.href + '/');
             return (
               <Link
                 key={item.name}
