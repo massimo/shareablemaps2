@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { 
   PhotoIcon, 
   XMarkIcon, 
@@ -36,6 +36,15 @@ export default function ImageUpload({
   const [imageFiles, setImageFiles] = useState<ImageFile[]>([]);
   const [isCompressing, setIsCompressing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Cleanup object URLs when component unmounts or imageFiles change
+  useEffect(() => {
+    return () => {
+      imageFiles.forEach(imageFile => {
+        URL.revokeObjectURL(imageFile.preview);
+      });
+    };
+  }, [imageFiles]);
 
   const compressImage = async (file: File): Promise<File> => {
     try {
@@ -135,6 +144,7 @@ export default function ImageUpload({
 
       // Compress images in background
       const processedImages: string[] = [];
+      const successfulImageIds: string[] = [];
       
       for (let i = 0; i < newImageFiles.length; i++) {
         const imageFile = newImageFiles[i];
@@ -155,8 +165,9 @@ export default function ImageUpload({
           // Convert to base64
           const base64String = await convertToBase64(compressedFile);
           processedImages.push(base64String);
+          successfulImageIds.push(imageFile.id);
 
-          // Update success state
+          // Update success state temporarily
           setImageFiles(prev => 
             prev.map(img => 
               img.id === imageFile.id 
@@ -182,6 +193,16 @@ export default function ImageUpload({
       // Update parent with new images
       if (processedImages.length > 0) {
         onImagesChange([...images, ...processedImages]);
+        
+        // Remove successfully processed image files to prevent duplication
+        setImageFiles(prev => {
+          const remaining = prev.filter(img => !successfulImageIds.includes(img.id));
+          // Clean up object URLs for removed images
+          prev.filter(img => successfulImageIds.includes(img.id)).forEach(img => {
+            URL.revokeObjectURL(img.preview);
+          });
+          return remaining;
+        });
       }
 
     } finally {
