@@ -3,19 +3,36 @@
 import React, { useState } from 'react';
 import { MagnifyingGlassIcon, MapPinIcon } from '@heroicons/react/24/outline';
 import { useLocationSearch } from '@/lib/osm';
+import { useGeolocation } from '@/hooks/useGeolocation';
 import { LocationCandidate } from '@/types';
 
 interface LocationSearchProps {
   onLocationSelect: (location: { lat: number; lng: number; address: string }) => void;
   placeholder?: string;
+  mapCenter?: { lat: number; lng: number };
 }
 
-export default function LocationSearch({ onLocationSelect, placeholder = "Search for a location..." }: LocationSearchProps) {
+export default function LocationSearch({ onLocationSelect, placeholder = "Search for a location...", mapCenter }: LocationSearchProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<LocationCandidate[]>([]);
   const [loading, setLoading] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const { searchLocations } = useLocationSearch();
+  const { position } = useGeolocation();
+
+  // Prioritize map center over user location for proximity sorting
+  const proximityLocation = React.useMemo(() => {
+    if (mapCenter) {
+      return mapCenter;
+    }
+    if (position) {
+      return {
+        lat: position.coords.latitude,
+        lng: position.coords.longitude,
+      };
+    }
+    return undefined;
+  }, [mapCenter, position]);
 
   // Debounced search function
   const performSearch = React.useCallback(
@@ -28,7 +45,7 @@ export default function LocationSearch({ onLocationSelect, placeholder = "Search
 
       setLoading(true);
       try {
-        const searchResults = await searchLocations(searchQuery, 10);
+        const searchResults = await searchLocations(searchQuery, 10, proximityLocation);
         setResults(searchResults);
         setShowResults(true);
       } catch (error) {
@@ -39,7 +56,7 @@ export default function LocationSearch({ onLocationSelect, placeholder = "Search
         setLoading(false);
       }
     },
-    [searchLocations]
+    [searchLocations, proximityLocation]
   );
 
   // Debounce search
@@ -106,7 +123,17 @@ export default function LocationSearch({ onLocationSelect, placeholder = "Search
               onClick={() => handleLocationSelect(location)}
             >
               <MapPinIcon className="h-4 w-4 text-gray-400 mr-2 flex-shrink-0" />
-              <span className="text-sm text-gray-900 truncate">{location.display_name}</span>
+              <div className="flex-1 min-w-0">
+                <span className="text-sm text-gray-900 truncate block">{location.display_name}</span>
+                {location.distance !== undefined && (
+                  <span className="text-xs text-gray-500">
+                    {location.distance < 1 
+                      ? `${Math.round(location.distance * 1000)}m away`
+                      : `${location.distance.toFixed(1)}km away`
+                    }
+                  </span>
+                )}
+              </div>
             </button>
           ))}
         </div>

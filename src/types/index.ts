@@ -155,6 +155,7 @@ export interface LocationCandidate {
   type: string;
   importance: number;
   place_id: string;
+  distance?: number;
 }
 
 // Form Types

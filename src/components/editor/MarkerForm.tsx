@@ -11,7 +11,7 @@ interface MarkerFormProps {
   marker?: MarkerDoc;
   onSave: (data: { title: string; categoryId?: string; address?: string; description?: string; tips: string[]; lat: number; lng: number }) => void;
   onCancel: () => void;
-  defaultPosition?: { lat: number; lng: number };
+  defaultPosition?: { lat: number; lng: number; address?: string };
 }
 
 interface FormData {
@@ -39,7 +39,13 @@ export default function MarkerForm({
       address: marker.address || '',
       description: marker.description || '',
       tips: marker.tips?.join('\n') || '',
-    } : {},
+    } : {
+      title: '',
+      categoryId: '',
+      address: defaultPosition?.address || '',
+      description: '',
+      tips: '',
+    },
   });
 
   const onSubmit = (data: FormData) => {

@@ -24,9 +24,9 @@ const MapCanvas = dynamic(() => import('@/components/editor/MapCanvas'), {
 });
 
 interface MapEditorPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export default function MapEditorPage({ params }: MapEditorPageProps) {
@@ -38,7 +38,10 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
   const [isLoadingMap, setIsLoadingMap] = useState(true);
   const [mapError, setMapError] = useState<string | null>(null);
 
-  const { setMapCenter, setMapZoom, setMapTitle, mapTitle } = useMapStore();
+  const { setMapCenter, setMapZoom, setMapTitle, mapTitle, mapCenter } = useMapStore();
+  
+  // Unwrap params using React.use()
+  const { id } = React.use(params);
 
   // Load map data from database
   useEffect(() => {
@@ -46,9 +49,9 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
       try {
         setIsLoadingMap(true);
         setMapError(null);
-        console.log('Loading map data for ID:', params.id);
+        console.log('Loading map data for ID:', id);
         
-        const mapData = await getMapById(params.id);
+        const mapData = await getMapById(id);
         if (mapData) {
           // Set map title
           setMapTitle(mapData.title);
@@ -66,7 +69,7 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
           console.log('Map data loaded successfully:', mapData);
         } else {
           // Map not found
-          console.error('Map not found:', params.id);
+          console.error('Map not found:', id);
           setMapError('Map not found');
           setMapTitle('Map Not Found');
           setMapCenter([51.505, -0.09]);
@@ -75,7 +78,7 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
       } catch (error) {
         console.error('Error loading map data:', error);
         setMapError('Failed to load map');
-        setMapTitle(`Map ${params.id}`);
+        setMapTitle(`Map ${id}`);
         setMapCenter([51.505, -0.09]);
         setMapZoom(16);
       } finally {
@@ -84,7 +87,7 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
     };
 
     loadMapData();
-  }, [params.id, setMapCenter, setMapZoom, setMapTitle]);
+  }, [id, setMapCenter, setMapZoom, setMapTitle]);
 
   const handleMapClick = useCallback((e: any) => {
     const { lat, lng } = e.latlng;
@@ -94,10 +97,15 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
   }, []);
 
   const handleLocationSelect = useCallback((location: { lat: number; lng: number; address: string }) => {
+    // Set the pending position for the marker form
     setPendingPosition(location);
     setEditingMarker(undefined);
     setShowMarkerForm(true);
-  }, []);
+    
+    // Move the map to the selected location
+    setMapCenter([location.lat, location.lng]);
+    setMapZoom(16); // Zoom in for better detail
+  }, [setMapCenter, setMapZoom]);
 
   const handleMarkerSave = useCallback((data: any) => {
     // TODO: Save to Firebase
@@ -185,6 +193,11 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
               <LocationSearch
                 onLocationSelect={handleLocationSelect}
                 placeholder="Search to add marker..."
+                mapCenter={
+                  mapCenter && Array.isArray(mapCenter) 
+                    ? { lat: mapCenter[0], lng: mapCenter[1] } 
+                    : undefined
+                }
               />
               
               {/* Add Marker Button */}
@@ -232,6 +245,8 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
             <MapCanvas
               onMapClick={handleMapClick}
               className="h-full"
+              markers={markers}
+              pendingPosition={pendingPosition}
             />
           </div>
         </>

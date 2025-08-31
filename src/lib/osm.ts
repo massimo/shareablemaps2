@@ -5,7 +5,11 @@ export class LocationSearchService {
   private static baseUrl = '/api/search/poi';
   private static abortController: AbortController | null = null;
 
-  static async search(query: string, limit: number = 10): Promise<LocationCandidate[]> {
+  static async search(
+    query: string, 
+    limit: number = 10,
+    userLocation?: { lat: number; lng: number }
+  ): Promise<LocationCandidate[]> {
     // Cancel previous request if still pending
     if (this.abortController) {
       this.abortController.abort();
@@ -18,6 +22,12 @@ export class LocationSearchService {
       const url = new URL(this.baseUrl, window.location.origin);
       url.searchParams.set('q', query);
       url.searchParams.set('limit', limit.toString());
+      
+      // Add user location for proximity sorting if available
+      if (userLocation) {
+        url.searchParams.set('userLat', userLocation.lat.toString());
+        url.searchParams.set('userLng', userLocation.lng.toString());
+      }
 
       const response = await fetch(url.toString(), {
         signal: this.abortController.signal,
@@ -57,9 +67,13 @@ export class LocationSearchService {
 
 // Hook for using location search with proper cleanup
 export function useLocationSearch() {
-  const searchLocations = React.useCallback(async (query: string, limit?: number) => {
+  const searchLocations = React.useCallback(async (
+    query: string, 
+    limit?: number,
+    userLocation?: { lat: number; lng: number }
+  ) => {
     try {
-      return await LocationSearchService.search(query, limit);
+      return await LocationSearchService.search(query, limit, userLocation);
     } catch (error) {
       console.error('Location search error:', error);
       return [];
