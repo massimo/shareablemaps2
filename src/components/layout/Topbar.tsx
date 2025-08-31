@@ -11,7 +11,7 @@ export default function Topbar() {
   
   // Check if we're in a map editor page
   const isMapEditor = pathname?.startsWith('/dashboard/maps/') && pathname !== '/dashboard/maps';
-  const mapId = isMapEditor ? pathname?.split('/')[2] : null;
+  const mapId = isMapEditor ? pathname?.split('/')[3] : null;
 
   return (
     <div className="bg-white border-b border-gray-200 px-4 py-2 sm:px-6">
