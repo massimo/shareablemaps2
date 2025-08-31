@@ -8,8 +8,8 @@ import ImageViewerModal from './ImageViewerModal';
 
 interface MarkerListProps {
   markers: MarkerDoc[];
-  onMarkerEdit: (marker: MarkerDoc) => void;
-  onMarkerDelete: (markerId: string) => void;
+  onMarkerEdit?: (marker: MarkerDoc) => void;
+  onMarkerDelete?: (markerId: string) => void;
   onMarkerSelect: (marker: MarkerDoc) => void;
   selectedMarkerId?: string;
   viewMode?: 'expanded' | 'compact';
@@ -156,28 +156,32 @@ export default function MarkerList({
             </div>
             
             <div className="flex items-center space-x-1 ml-2">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onMarkerEdit(marker);
-                }}
-                className={`${viewMode === 'compact' ? 'p-0.5' : 'p-1'} text-gray-400 hover:text-blue-600 focus:outline-none focus:text-blue-600`}
-                aria-label="Edit marker"
-              >
-                <PencilIcon className={`${viewMode === 'compact' ? 'h-3 w-3' : 'h-4 w-4'}`} />
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (marker.id) {
-                    onMarkerDelete(marker.id);
-                  }
-                }}
-                className={`${viewMode === 'compact' ? 'p-0.5' : 'p-1'} text-gray-400 hover:text-red-600 focus:outline-none focus:text-red-600`}
-                aria-label="Delete marker"
-              >
-                <TrashIcon className={`${viewMode === 'compact' ? 'h-3 w-3' : 'h-4 w-4'}`} />
-              </button>
+              {onMarkerEdit && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onMarkerEdit(marker);
+                  }}
+                  className={`${viewMode === 'compact' ? 'p-0.5' : 'p-1'} text-gray-400 hover:text-blue-600 focus:outline-none focus:text-blue-600`}
+                  aria-label="Edit marker"
+                >
+                  <PencilIcon className={`${viewMode === 'compact' ? 'h-3 w-3' : 'h-4 w-4'}`} />
+                </button>
+              )}
+              {onMarkerDelete && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (marker.id) {
+                      onMarkerDelete(marker.id);
+                    }
+                  }}
+                  className={`${viewMode === 'compact' ? 'p-0.5' : 'p-1'} text-gray-400 hover:text-red-600 focus:outline-none focus:text-red-600`}
+                  aria-label="Delete marker"
+                >
+                  <TrashIcon className={`${viewMode === 'compact' ? 'h-3 w-3' : 'h-4 w-4'}`} />
+                </button>
+              )}
             </div>
           </div>
         </div>

@@ -40,6 +40,11 @@ export interface MapDoc {
   updatedAt: Timestamp;
   isPublicLinkEnabled: boolean;
   shareId?: string;
+  shareSettings?: {
+    shareType: 'private' | 'public' | 'password';
+    password?: string;
+    isEnabled: boolean;
+  };
   stats: MapStats;
   categories: MapCategory[];
   tags?: string[];

@@ -16,6 +16,7 @@ import ShareModal, { ShareSettings } from '@/components/maps/ShareModal';
 import { useMapStore } from '@/lib/store';
 import { getMapById } from '@/lib/mapService';
 import { MarkerService } from '@/lib/markerService';
+import { SharedMapService } from '@/lib/sharedMapService';
 import { auth } from '@/lib/firebase';
 import { MapIcon, ShareIcon } from '@heroicons/react/24/outline';
 import { Bars3Icon, Squares2X2Icon } from '@heroicons/react/24/outline';
@@ -491,10 +492,15 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
   }, []);
 
   const handleShareSave = useCallback(async (shareSettings: ShareSettings) => {
-    // TODO: Implement saving share settings to database
-    console.log('Saving share settings:', shareSettings);
-    // For now, just log the settings. We'll implement the database storage next.
-  }, []);
+    try {
+      await SharedMapService.updateShareSettings(id, shareSettings);
+      console.log('Share settings saved:', shareSettings);
+      // TODO: Show success notification
+    } catch (error) {
+      console.error('Error saving share settings:', error);
+      throw error; // Let the modal handle the error
+    }
+  }, [id]);
 
   return (
     <div className="h-full flex">

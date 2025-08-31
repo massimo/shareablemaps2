@@ -59,9 +59,13 @@ export default function ShareModal({ isOpen, onClose, mapId, mapTitle, onSave }:
     try {
       const settings: ShareSettings = {
         shareType,
-        password: shareType === 'password' ? password : undefined,
         isEnabled: shareType !== 'private'
       };
+
+      // Only include password if shareType is 'password' and password is provided
+      if (shareType === 'password' && password.trim().length > 0) {
+        settings.password = password;
+      }
 
       await onSave(settings);
       onClose();
