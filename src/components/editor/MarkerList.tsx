@@ -47,7 +47,32 @@ export default function MarkerList({
           <div className="flex items-start justify-between">
             <div className="flex-1 min-w-0">
               <div className="flex items-center">
-                <MapPinIcon className="h-4 w-4 text-gray-400 mr-2 flex-shrink-0" />
+                {/* Show colored marker icon instead of generic MapPinIcon */}
+                {marker.icon?.color ? (
+                  <div className="flex items-center mr-2 flex-shrink-0">
+                    {marker.icon.markerType === 'circle' ? (
+                      <div
+                        className="w-4 h-4 rounded-full border-2 border-white shadow-sm"
+                        style={{ backgroundColor: marker.icon.color }}
+                        title={`${marker.icon.markerType} marker`}
+                      />
+                    ) : (
+                      <div className="relative w-4 h-5">
+                        <svg width="16" height="20" viewBox="0 0 16 20" className="drop-shadow-sm">
+                          <path
+                            d="M8 0C3.6 0 0 3.6 0 8c0 5.2 8 12 8 12s8-6.8 8-12c0-4.4-3.6-8-8-8z"
+                            fill={marker.icon.color}
+                            stroke="#fff"
+                            strokeWidth="1"
+                          />
+                          <circle cx="8" cy="8" r="2.5" fill="#fff"/>
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <MapPinIcon className="h-4 w-4 text-gray-400 mr-2 flex-shrink-0" />
+                )}
                 <h4 className="text-sm font-medium text-gray-900 truncate">
                   {marker.title}
                 </h4>
