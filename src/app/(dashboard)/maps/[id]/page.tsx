@@ -8,11 +8,12 @@ import { MarkerDoc } from '@/types';
 import MarkerList from '@/components/editor/MarkerList';
 import MarkerForm from '@/components/editor/MarkerForm';
 import LocationSearch from '@/components/editor/LocationSearch';
+import AddMarkerConfirmModal from '@/components/editor/AddMarkerConfirmModal';
 import { useMapStore } from '@/lib/store';
 import { getMapById } from '@/lib/mapService';
 import { MarkerService } from '@/lib/markerService';
 import { auth } from '@/lib/firebase';
-import { PlusIcon, MapIcon } from '@heroicons/react/24/outline';
+import { MapIcon } from '@heroicons/react/24/outline';
 
 // Dynamically import MapCanvas to avoid SSR issues with Leaflet
 const MapCanvas = dynamic(() => import('@/components/editor/MapCanvas'), {
@@ -37,6 +38,7 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
   const [markers, setMarkers] = useState<MarkerDoc[]>([]);
   const [selectedMarkerId, setSelectedMarkerId] = useState<string>();
   const [showMarkerForm, setShowMarkerForm] = useState(false);
+  const [showAddMarkerConfirm, setShowAddMarkerConfirm] = useState(false);
   const [editingMarker, setEditingMarker] = useState<MarkerDoc | undefined>();
   const [pendingPosition, setPendingPosition] = useState<{ lat: number; lng: number; address?: string } | undefined>();
   const [pendingColor, setPendingColor] = useState<string>('#ef4444'); // Default red
@@ -135,21 +137,34 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
     return () => clearInterval(interval);
   }, [id]);
 
-  const handleMapClick = useCallback((e: any) => {
-    const { lat, lng } = e.latlng;
-    // If there's already a pending position, replace it with the clicked location
-    setPendingPosition({ lat, lng });
+  const handleMapClick = useCallback((e: { lat: number; lng: number }) => {
+    console.log('Map clicked at:', e.lat, e.lng);
+    
+    // Set pending position and show confirmation modal
+    setPendingPosition({ lat: e.lat, lng: e.lng });
+    setShowAddMarkerConfirm(true);
     setEditingMarker(undefined);
-    setShowMarkerForm(true);
     setPendingColor('#ef4444'); // Reset to default color for new marker
     setPendingMarkerType('pin'); // Reset to default marker type for new marker
   }, []);
 
-  const handleLocationSelect = useCallback((location: { lat: number; lng: number; address: string }) => {
-    // Set the pending position for the marker form
-    setPendingPosition(location);
-    setEditingMarker(undefined);
+  const handleAddMarkerConfirm = useCallback(() => {
+    setShowAddMarkerConfirm(false);
     setShowMarkerForm(true);
+  }, []);
+
+  const handleAddMarkerCancel = useCallback(() => {
+    setShowAddMarkerConfirm(false);
+    setPendingPosition(undefined);
+    setPendingColor('#ef4444'); // Reset color
+    setPendingMarkerType('pin'); // Reset marker type
+  }, []);
+
+  const handleLocationSelect = useCallback((location: { lat: number; lng: number; address: string }) => {
+    // Set the pending position and show confirmation modal
+    setPendingPosition(location);
+    setShowAddMarkerConfirm(true);
+    setEditingMarker(undefined);
     setPendingColor('#ef4444'); // Reset to default color for new marker
     setPendingMarkerType('pin'); // Reset to default marker type for new marker
     
@@ -352,7 +367,7 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
               />
               
               {/* Clear pending marker button - only show if there's a pending position */}
-              {pendingPosition && !showMarkerForm && (
+              {pendingPosition && !showMarkerForm && !showAddMarkerConfirm && (
                 <button
                   onClick={() => {
                     setPendingPosition(undefined);
@@ -364,24 +379,6 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
                   Clear pending marker
                 </button>
               )}
-              
-              {/* Add Marker Button */}
-              <button
-                onClick={() => {
-                  // Use current map center or default to current position
-                  const defaultPos = mapCenter && Array.isArray(mapCenter) 
-                    ? { lat: mapCenter[0], lng: mapCenter[1] }
-                    : { lat: 51.505, lng: -0.09 }; // Fallback to London
-                  setPendingPosition(defaultPos);
-                  setEditingMarker(undefined);
-                  setShowMarkerForm(true);
-                  setPendingColor('#ef4444'); // Reset to default color for new marker
-                }}
-                className="mt-3 w-full inline-flex items-center justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
-              >
-                <PlusIcon className="h-4 w-4 mr-2" />
-                Add Marker
-              </button>
             </div>
 
             {/* Marker List */}
@@ -432,6 +429,14 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
           </div>
         </>
       )}
+
+      {/* Add Marker Confirmation Modal */}
+      <AddMarkerConfirmModal
+        isOpen={showAddMarkerConfirm}
+        onClose={handleAddMarkerCancel}
+        onConfirm={handleAddMarkerConfirm}
+        position={pendingPosition}
+      />
     </div>
   );
 }

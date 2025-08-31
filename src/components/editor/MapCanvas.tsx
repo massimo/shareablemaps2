@@ -251,7 +251,14 @@ export default function MapCanvas({
         )}
         
         <MapController 
-          onMapClick={onMapClick ? (e) => onMapClick({ lat: e.latlng.lat, lng: e.latlng.lng }) : undefined} 
+          onMapClick={onMapClick ? (e) => {
+            console.log('MapController click event:', e);
+            if (e.latlng) {
+              onMapClick({ lat: e.latlng.lat, lng: e.latlng.lng });
+            } else {
+              console.error('Invalid click event structure:', e);
+            }
+          } : undefined} 
           onMapReady={onMapReady} 
         />
       </MapContainer>
