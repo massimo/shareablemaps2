@@ -1,11 +1,13 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import dynamic from 'next/dynamic';
+import { useSearchParams } from 'next/navigation';
 import { MarkerDoc } from '@/types';
 import MarkerList from '@/components/editor/MarkerList';
 import MarkerForm from '@/components/editor/MarkerForm';
 import LocationSearch from '@/components/editor/LocationSearch';
+import { useMapStore } from '@/lib/store';
 import { PlusIcon, MapIcon } from '@heroicons/react/24/outline';
 
 // Dynamically import MapCanvas to avoid SSR issues with Leaflet
@@ -28,14 +30,46 @@ interface MapEditorPageProps {
 }
 
 export default function MapEditorPage({ params }: MapEditorPageProps) {
+  const searchParams = useSearchParams();
   const [markers, setMarkers] = useState<MarkerDoc[]>([]);
   const [selectedMarkerId, setSelectedMarkerId] = useState<string>();
   const [showMarkerForm, setShowMarkerForm] = useState(false);
   const [editingMarker, setEditingMarker] = useState<MarkerDoc | undefined>();
   const [pendingPosition, setPendingPosition] = useState<{ lat: number; lng: number } | undefined>();
 
-  // TODO: Replace with actual map data fetching
-  const mapTitle = `Map ${params.id}`;
+  const { setMapCenter, setMapZoom, setMapTitle, mapTitle } = useMapStore();
+
+  // Initialize map with URL parameters
+  useEffect(() => {
+    // Get parameters from URL
+    const lat = searchParams.get('lat');
+    const lng = searchParams.get('lng');
+    const zoom = searchParams.get('zoom');
+    const city = searchParams.get('city');
+    const title = searchParams.get('title');
+    
+    // Set map title if provided, otherwise use default
+    const displayTitle = title ? decodeURIComponent(title) : `Map ${params.id}`;
+    setMapTitle(displayTitle);
+    
+    // Set map center and zoom if coordinates are provided
+    if (lat && lng) {
+      const latitude = parseFloat(lat);
+      const longitude = parseFloat(lng);
+      
+      if (!isNaN(latitude) && !isNaN(longitude)) {
+        setMapCenter([latitude, longitude]);
+        
+        // Set zoom level (default to 12 if not provided or invalid)
+        const zoomLevel = zoom ? parseInt(zoom, 10) : 12;
+        if (!isNaN(zoomLevel) && zoomLevel >= 1 && zoomLevel <= 18) {
+          setMapZoom(zoomLevel);
+        } else {
+          setMapZoom(12);
+        }
+      }
+    }
+  }, [searchParams, params.id, setMapCenter, setMapZoom, setMapTitle]);
 
   const handleMapClick = useCallback((e: any) => {
     const { lat, lng } = e.latlng;

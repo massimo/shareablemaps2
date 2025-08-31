@@ -2,15 +2,8 @@
 
 import React, { useState } from 'react';
 import { MagnifyingGlassIcon, MapPinIcon } from '@heroicons/react/24/outline';
-
-interface LocationCandidate {
-  display_name: string;
-  lat: string;
-  lon: string;
-  type: string;
-  importance: number;
-  place_id: string;
-}
+import { useLocationSearch } from '@/lib/osm';
+import { LocationCandidate } from '@/types';
 
 interface LocationSearchProps {
   onLocationSelect: (location: { lat: number; lng: number; address: string }) => void;
@@ -22,9 +15,10 @@ export default function LocationSearch({ onLocationSelect, placeholder = "Search
   const [results, setResults] = useState<LocationCandidate[]>([]);
   const [loading, setLoading] = useState(false);
   const [showResults, setShowResults] = useState(false);
+  const { searchLocations } = useLocationSearch();
 
   // Debounced search function
-  const searchLocations = React.useCallback(
+  const performSearch = React.useCallback(
     async (searchQuery: string) => {
       if (searchQuery.length < 3) {
         setResults([]);
@@ -34,47 +28,28 @@ export default function LocationSearch({ onLocationSelect, placeholder = "Search
 
       setLoading(true);
       try {
-        // TODO: Replace with actual API call to /api/search/poi
-        // For now, using mock data
-        const mockResults: LocationCandidate[] = [
-          {
-            display_name: `${searchQuery} - Mock Location 1`,
-            lat: '51.505',
-            lon: '-0.09',
-            type: 'city',
-            importance: 0.8,
-            place_id: '1',
-          },
-          {
-            display_name: `${searchQuery} - Mock Location 2`,
-            lat: '40.7128',
-            lon: '-74.0060',
-            type: 'city',
-            importance: 0.7,
-            place_id: '2',
-          },
-        ];
-        
-        setResults(mockResults);
+        const searchResults = await searchLocations(searchQuery, 10);
+        setResults(searchResults);
         setShowResults(true);
       } catch (error) {
         console.error('Location search error:', error);
         setResults([]);
+        setShowResults(false);
       } finally {
         setLoading(false);
       }
     },
-    []
+    [searchLocations]
   );
 
   // Debounce search
   React.useEffect(() => {
     const timer = setTimeout(() => {
-      searchLocations(query);
+      performSearch(query);
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [query, searchLocations]);
+  }, [query, performSearch]);
 
   const handleLocationSelect = (location: LocationCandidate) => {
     onLocationSelect({
@@ -84,6 +59,19 @@ export default function LocationSearch({ onLocationSelect, placeholder = "Search
     });
     setQuery(location.display_name);
     setShowResults(false);
+  };
+
+  const handleInputFocus = () => {
+    if (results.length > 0) {
+      setShowResults(true);
+    }
+  };
+
+  const handleInputBlur = () => {
+    // Delay hiding results to allow for clicks
+    setTimeout(() => {
+      setShowResults(false);
+    }, 200);
   };
 
   return (
@@ -98,7 +86,8 @@ export default function LocationSearch({ onLocationSelect, placeholder = "Search
           placeholder={placeholder}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          onFocus={() => setShowResults(results.length > 0)}
+          onFocus={handleInputFocus}
+          onBlur={handleInputBlur}
         />
         {loading && (
           <div className="absolute inset-y-0 right-0 flex items-center pr-3">

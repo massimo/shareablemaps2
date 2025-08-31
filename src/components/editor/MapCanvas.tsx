@@ -3,6 +3,7 @@
 import React, { useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, useMap } from 'react-leaflet';
 import L from 'leaflet';
+import { useMapStore } from '@/lib/store';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-defaulticon-compatibility';
 import 'leaflet-defaulticon-compatibility/dist/leaflet-defaulticon-compatibility.css';
@@ -16,15 +17,20 @@ L.Icon.Default.mergeOptions({
 });
 
 interface MapCanvasProps {
-  center?: [number, number];
-  zoom?: number;
   onMapReady?: (map: L.Map) => void;
   onMapClick?: (e: L.LeafletMouseEvent) => void;
   className?: string;
 }
 
-function MapEventHandler({ onMapClick, onMapReady }: { onMapClick?: (e: L.LeafletMouseEvent) => void; onMapReady?: (map: L.Map) => void }) {
+function MapController({ 
+  onMapClick, 
+  onMapReady 
+}: { 
+  onMapClick?: (e: L.LeafletMouseEvent) => void; 
+  onMapReady?: (map: L.Map) => void;
+}) {
   const map = useMap();
+  const { mapCenter, mapZoom } = useMapStore();
 
   useEffect(() => {
     if (onMapReady) {
@@ -42,23 +48,29 @@ function MapEventHandler({ onMapClick, onMapReady }: { onMapClick?: (e: L.Leafle
     };
   }, [map, onMapClick, onMapReady]);
 
+  // Update map view when store values change
+  useEffect(() => {
+    if (mapCenter) {
+      map.setView(mapCenter, mapZoom, { animate: true });
+    }
+  }, [map, mapCenter, mapZoom]);
+
   return null;
 }
 
 export default function MapCanvas({
-  center = [51.505, -0.09], // Default to London
-  zoom = 13,
   onMapReady,
   onMapClick,
   className = 'h-full w-full',
 }: MapCanvasProps) {
   const mapRef = useRef<L.Map | null>(null);
+  const { mapCenter, mapZoom } = useMapStore();
 
   return (
     <div className={className}>
       <MapContainer
-        center={center}
-        zoom={zoom}
+        center={mapCenter}
+        zoom={mapZoom}
         className="h-full w-full"
         ref={(mapInstance) => {
           if (mapInstance) {
@@ -72,7 +84,7 @@ export default function MapCanvas({
           subdomains="abcd"
           maxZoom={19}
         />
-        <MapEventHandler onMapClick={onMapClick} onMapReady={onMapReady} />
+        <MapController onMapClick={onMapClick} onMapReady={onMapReady} />
       </MapContainer>
     </div>
   );

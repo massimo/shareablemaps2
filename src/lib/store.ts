@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { MarkerDoc, MapDoc } from '@/types';
+import type { LatLngExpression } from 'leaflet';
 
 interface EditorState {
   currentMap: MapDoc | null;
@@ -7,6 +8,11 @@ interface EditorState {
   selectedMarkerId: string | null;
   isLoading: boolean;
   error: string | null;
+  
+  // Map state
+  mapCenter: LatLngExpression;
+  mapZoom: number;
+  mapTitle: string;
   
   // Actions
   setCurrentMap: (map: MapDoc | null) => void;
@@ -17,6 +23,11 @@ interface EditorState {
   setSelectedMarkerId: (id: string | null) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
+  
+  // Map actions
+  setMapCenter: (center: LatLngExpression) => void;
+  setMapZoom: (zoom: number) => void;
+  setMapTitle: (title: string) => void;
 }
 
 export const useEditorStore = create<EditorState>((set, get) => ({
@@ -25,6 +36,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   selectedMarkerId: null,
   isLoading: false,
   error: null,
+  
+  // Initial map state - default to London
+  mapCenter: [51.505, -0.09] as LatLngExpression,
+  mapZoom: 10,
+  mapTitle: 'Untitled Map',
 
   setCurrentMap: (map) => set({ currentMap: map }),
   
@@ -50,4 +66,12 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   setLoading: (loading) => set({ isLoading: loading }),
   
   setError: (error) => set({ error }),
+  
+  // Map actions
+  setMapCenter: (center) => set({ mapCenter: center }),
+  setMapZoom: (zoom) => set({ mapZoom: zoom }),
+  setMapTitle: (title) => set({ mapTitle: title }),
 }));
+
+// Alias for backwards compatibility and convenience
+export const useMapStore = useEditorStore;
