@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { 
-  MapIcon, 
   EyeIcon, 
   ChatBubbleLeftIcon, 
   HeartIcon,
@@ -373,7 +372,7 @@ export default function MyMapsPage() {
               </h3>
               <div className="mt-2 px-7 py-3">
                 <p className="text-sm text-gray-500">
-                  Are you sure you want to delete "{selectedMapTitle}"? This action cannot be undone.
+                  Are you sure you want to delete &ldquo;{selectedMapTitle}&rdquo;? This action cannot be undone.
                 </p>
               </div>
               <div className="flex justify-center space-x-4 mt-4">

@@ -98,7 +98,7 @@ export default function CategorySelectionModal({
 
           {filteredCategories.length === 0 && (
             <div className="text-center py-8">
-              <p className="text-gray-500">No categories found matching "{searchTerm}"</p>
+              <p className="text-gray-500">No categories found matching &ldquo;{searchTerm}&rdquo;</p>
             </div>
           )}
         </div>

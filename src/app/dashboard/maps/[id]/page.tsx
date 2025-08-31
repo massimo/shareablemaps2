@@ -482,7 +482,7 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
     setSelectedMarkerId(undefined);
   }, []);
 
-  const handleDirections = useCallback((lat: number, lng: number, title: string) => {
+  const handleDirections = useCallback((_lat: number, _lng: number, _title: string) => {
     setShowDirectionsModal(true);
   }, []);
 
