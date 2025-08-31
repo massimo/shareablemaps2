@@ -170,11 +170,12 @@ export default function MapCanvas({
   }, []);
 
   return (
-    <div className={className}>
+    <div className={className} style={{ position: 'relative', zIndex: 1 }}>
       <MapContainer
         center={mapCenter}
         zoom={mapZoom}
         className="h-full w-full"
+        style={{ zIndex: 1 }}
         ref={(mapInstance) => {
           if (mapInstance) {
             mapRef.current = mapInstance;

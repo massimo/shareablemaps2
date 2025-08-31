@@ -24,3 +24,18 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Ensure modals appear above Leaflet maps */
+.leaflet-container {
+  z-index: 1 !important;
+}
+
+.leaflet-control-container {
+  z-index: 1000 !important;
+}
+
+/* Ensure React portals and modals have highest z-index */
+[data-modal="true"], 
+.modal-overlay {
+  z-index: 9999 !important;
+}

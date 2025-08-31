@@ -1,11 +1,13 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { markerSchema, MarkerForm as MarkerFormType } from '@/lib/validators';
 import { MarkerDoc } from '@/types';
-import { XMarkIcon, PhotoIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, PhotoIcon, TagIcon } from '@heroicons/react/24/outline';
+import CategorySelectionModal from './CategorySelectionModal';
+import { getCategoryById } from '@/lib/categories';
 
 interface MarkerFormProps {
   marker?: MarkerDoc;
@@ -34,6 +36,8 @@ export default function MarkerForm({
   onColorChange,
   onMarkerTypeChange,
 }: MarkerFormProps) {
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  
   // Predefined color palette
   const colorOptions = [
     { name: 'Red', value: '#ef4444', bg: 'bg-red-500' },
@@ -76,6 +80,7 @@ export default function MarkerForm({
 
   const selectedColor = watch('color');
   const selectedMarkerType = watch('markerType');
+  const selectedCategoryId = watch('categoryId');
 
   const handleColorSelect = (color: string) => {
     setValue('color', color);
@@ -85,6 +90,10 @@ export default function MarkerForm({
   const handleMarkerTypeSelect = (type: 'pin' | 'circle') => {
     setValue('markerType', type);
     onMarkerTypeChange?.(type);
+  };
+
+  const handleCategorySelect = (categoryId: string) => {
+    setValue('categoryId', categoryId);
   };
 
   const onSubmit = (data: FormData) => {
@@ -134,6 +143,39 @@ export default function MarkerForm({
           {errors.title && (
             <p className="mt-1 text-sm text-red-600">{errors.title.message}</p>
           )}
+        </div>
+
+        {/* Category Selection */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Category
+          </label>
+          <button
+            type="button"
+            onClick={() => setShowCategoryModal(true)}
+            className="w-full flex items-center justify-between px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            <div className="flex items-center">
+              {selectedCategoryId ? (
+                <>
+                  <span className="text-lg mr-2" role="img">
+                    {getCategoryById(selectedCategoryId)?.icon}
+                  </span>
+                  <span className="text-sm text-gray-900">
+                    {getCategoryById(selectedCategoryId)?.name}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <TagIcon className="h-4 w-4 text-gray-400 mr-2" />
+                  <span className="text-sm text-gray-500">Select a category...</span>
+                </>
+              )}
+            </div>
+            <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
         </div>
 
         {/* Marker Type Selector */}
@@ -296,6 +338,14 @@ export default function MarkerForm({
           </button>
         </div>
       </form>
+
+      {/* Category Selection Modal */}
+      <CategorySelectionModal
+        isOpen={showCategoryModal}
+        onClose={() => setShowCategoryModal(false)}
+        onSelect={handleCategorySelect}
+        selectedCategoryId={selectedCategoryId}
+      />
     </div>
   );
 }

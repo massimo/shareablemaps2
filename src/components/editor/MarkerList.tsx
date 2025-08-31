@@ -3,6 +3,7 @@
 import React from 'react';
 import { TrashIcon, PencilIcon, MapPinIcon } from '@heroicons/react/24/outline';
 import { MarkerDoc } from '@/types';
+import { getCategoryById } from '@/lib/categories';
 
 interface MarkerListProps {
   markers: MarkerDoc[];
@@ -51,6 +52,16 @@ export default function MarkerList({
                   {marker.title}
                 </h4>
               </div>
+              {marker.categoryId && (
+                <div className="mt-1 flex items-center">
+                  <span className="text-sm mr-1" role="img">
+                    {getCategoryById(marker.categoryId)?.icon}
+                  </span>
+                  <span className="text-xs text-gray-500">
+                    {getCategoryById(marker.categoryId)?.name}
+                  </span>
+                </div>
+              )}
               {marker.address && (
                 <p className="mt-1 text-xs text-gray-500 truncate">
                   {marker.address}
