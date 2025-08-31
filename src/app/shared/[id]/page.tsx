@@ -462,8 +462,6 @@ export default function SharedMapPage({ params }: SharedMapPageProps) {
           <div className="flex-1 overflow-hidden">
             <MarkerList
               markers={filteredMarkers}
-              onMarkerEdit={() => {}} // No-op for read-only mode
-              onMarkerDelete={() => {}} // No-op for read-only mode
               onMarkerSelect={handleMarkerSelect}
               selectedMarkerId={selectedMarkerId}
               viewMode={viewMode}
