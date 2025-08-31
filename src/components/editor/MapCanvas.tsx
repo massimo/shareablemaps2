@@ -79,37 +79,45 @@ export default function MapCanvas({
   const mapRef = useRef<L.Map | null>(null);
   const { mapCenter, mapZoom } = useMapStore();
 
-  // Function to create colored marker icons
+  // Function to create colored marker icons using SVG data URLs for accurate colors
   const createColoredIcon = React.useCallback((color?: string) => {
-    const baseIconUrl = '/leaflet/marker-icon.png';
+    if (!color) {
+      // Default red marker
+      return new L.Icon({
+        iconUrl: '/leaflet/marker-icon.png',
+        iconRetinaUrl: '/leaflet/marker-icon-2x.png',
+        shadowUrl: '/leaflet/marker-shadow.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowSize: [41, 41],
+      });
+    }
+
+    // Create SVG marker with the exact color
+    const svgIcon = `
+      <svg width="25" height="41" viewBox="0 0 25 41" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12.5 0C5.596 0 0 5.596 0 12.5c0 8.125 12.5 28.5 12.5 28.5S25 20.625 25 12.5C25 5.596 19.404 0 12.5 0z" 
+              fill="${color}" 
+              stroke="#fff" 
+              stroke-width="1"/>
+        <circle cx="12.5" cy="12.5" r="4" fill="#fff"/>
+      </svg>
+    `;
+    
+    const svgUrl = `data:image/svg+xml;base64,${btoa(svgIcon)}`;
     
     return new L.Icon({
-      iconUrl: baseIconUrl,
-      iconRetinaUrl: '/leaflet/marker-icon-2x.png',
+      iconUrl: svgUrl,
       shadowUrl: '/leaflet/marker-shadow.png',
       iconSize: [25, 41],
       iconAnchor: [12, 41],
       popupAnchor: [1, -34],
       shadowSize: [41, 41],
-      className: color ? `colored-marker-${color.replace('#', '')}` : undefined,
     });
   }, []);
 
-  // Create a special icon for pending markers using useMemo to prevent recreation
-  const pendingIcon = React.useMemo(() => {
-    return new L.Icon({
-      iconUrl: '/leaflet/marker-icon.png',
-      iconRetinaUrl: '/leaflet/marker-icon-2x.png',
-      shadowUrl: '/leaflet/marker-shadow.png',
-      iconSize: [25, 41],
-      iconAnchor: [12, 41],
-      popupAnchor: [1, -34],
-      shadowSize: [41, 41],
-      className: 'pending-marker-icon',
-    });
-  }, []);
-
-  // Add CSS for pending marker animation and colored markers
+  // Add CSS for pending marker animation
   useEffect(() => {
     const style = document.createElement('style');
     style.textContent = `
@@ -121,18 +129,6 @@ export default function MapCanvas({
         0%, 100% { opacity: 1; }
         50% { opacity: 0.7; }
       }
-      
-      /* Colored marker styles */
-      .colored-marker-ef4444 { filter: hue-rotate(0deg) brightness(1) saturate(1.5); }
-      .colored-marker-3b82f6 { filter: hue-rotate(220deg) brightness(1.1) saturate(1.3); }
-      .colored-marker-10b981 { filter: hue-rotate(140deg) brightness(1.1) saturate(1.4); }
-      .colored-marker-f59e0b { filter: hue-rotate(35deg) brightness(1.2) saturate(1.5); }
-      .colored-marker-8b5cf6 { filter: hue-rotate(260deg) brightness(1.1) saturate(1.3); }
-      .colored-marker-ec4899 { filter: hue-rotate(320deg) brightness(1.2) saturate(1.4); }
-      .colored-marker-f97316 { filter: hue-rotate(25deg) brightness(1.1) saturate(1.5); }
-      .colored-marker-14b8a6 { filter: hue-rotate(175deg) brightness(1.1) saturate(1.4); }
-      .colored-marker-6366f1 { filter: hue-rotate(235deg) brightness(1.1) saturate(1.3); }
-      .colored-marker-6b7280 { filter: grayscale(1) brightness(0.8); }
     `;
     document.head.appendChild(style);
     
