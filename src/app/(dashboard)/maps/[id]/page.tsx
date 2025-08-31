@@ -10,6 +10,8 @@ import MarkerForm from '@/components/editor/MarkerForm';
 import LocationSearch from '@/components/editor/LocationSearch';
 import AddMarkerConfirmModal from '@/components/editor/AddMarkerConfirmModal';
 import CategoryFilter from '@/components/editor/CategoryFilter';
+import MarkerCard from '@/components/maps/MarkerCard';
+import DirectionsModal from '@/components/maps/DirectionsModal';
 import { useMapStore } from '@/lib/store';
 import { getMapById } from '@/lib/mapService';
 import { MarkerService } from '@/lib/markerService';
@@ -39,6 +41,8 @@ interface MapEditorPageProps {
 export default function MapEditorPage({ params }: MapEditorPageProps) {
   const [markers, setMarkers] = useState<MarkerDoc[]>([]);
   const [selectedMarkerId, setSelectedMarkerId] = useState<string>();
+  const [selectedMarker, setSelectedMarker] = useState<MarkerDoc | null>(null);
+  const [showDirectionsModal, setShowDirectionsModal] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<'expanded' | 'compact'>('expanded');
   const [showMarkerForm, setShowMarkerForm] = useState(false);
@@ -438,6 +442,7 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
 
   const handleMarkerSelect = useCallback((marker: MarkerDoc) => {
     setSelectedMarkerId(marker.id);
+    setSelectedMarker(marker);
     
     // Center and zoom to the selected marker with smooth animation
     if (mapRef.current && marker.lat && marker.lng) {
@@ -460,6 +465,19 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
   const handleCategoryFilterChange = useCallback((categories: string[]) => {
     setSelectedCategories(categories);
     console.log('Category filter changed:', categories);
+  }, []);
+
+  const handleMarkerCardClose = useCallback(() => {
+    setSelectedMarker(null);
+    setSelectedMarkerId(undefined);
+  }, []);
+
+  const handleDirections = useCallback((lat: number, lng: number, title: string) => {
+    setShowDirectionsModal(true);
+  }, []);
+
+  const handleDirectionsModalClose = useCallback(() => {
+    setShowDirectionsModal(false);
   }, []);
 
   return (
@@ -651,9 +669,10 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
           </div>
 
           {/* Right Panel - Map */}
-          <div className="flex-1">
+          <div className="flex-1 relative">
             <MapCanvas
               onMapClick={handleMapClick}
+              onMarkerSelect={handleMarkerSelect}
               onMapReady={handleMapReady}
               className="h-full"
               markers={markers} // Show all markers on map, regardless of filter
@@ -662,6 +681,17 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
               pendingMarkerType={pendingMarkerType}
               selectedMarkerId={selectedMarkerId}
             />
+            
+            {/* Marker Card Overlay */}
+            {selectedMarker && (
+              <div className="absolute top-4 right-4 w-80 z-[1000]">
+                <MarkerCard
+                  marker={selectedMarker}
+                  onClose={handleMarkerCardClose}
+                  onDirections={handleDirections}
+                />
+              </div>
+            )}
           </div>
         </>
       )}
@@ -673,6 +703,17 @@ export default function MapEditorPage({ params }: MapEditorPageProps) {
         onConfirm={handleAddMarkerConfirm}
         position={pendingPosition}
       />
+
+      {/* Directions Modal */}
+      {selectedMarker && (
+        <DirectionsModal
+          isOpen={showDirectionsModal}
+          onClose={handleDirectionsModalClose}
+          lat={selectedMarker.lat}
+          lng={selectedMarker.lng}
+          title={selectedMarker.title}
+        />
+      )}
     </div>
   );
 }

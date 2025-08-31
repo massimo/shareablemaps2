@@ -21,6 +21,7 @@ interface MapCanvasProps {
   className?: string;
   markers: MarkerDoc[];
   onMapClick?: (latlng: { lat: number; lng: number }) => void;
+  onMarkerSelect?: (marker: MarkerDoc) => void;
   onMapReady?: (map: L.Map) => void;
   pendingPosition?: { lat: number; lng: number; address?: string };
   pendingColor?: string;
@@ -73,6 +74,7 @@ function MapController({
 export default function MapCanvas({
   onMapReady,
   onMapClick,
+  onMarkerSelect,
   className = 'h-full w-full',
   markers = [],
   pendingPosition,
@@ -197,6 +199,13 @@ export default function MapCanvas({
               key={marker.id}
               position={[marker.lat, marker.lng]}
               icon={createColoredIcon(marker.icon?.color, marker.icon?.markerType, isSelected)}
+              eventHandlers={{
+                click: () => {
+                  if (onMarkerSelect) {
+                    onMarkerSelect(marker);
+                  }
+                }
+              }}
             >
               <Popup>
                 <div className="min-w-0">
